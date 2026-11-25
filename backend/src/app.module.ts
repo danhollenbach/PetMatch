@@ -1,4 +1,8 @@
 import { Module } from '@nestjs/common';
+import { ConfigModule } from '@nestjs/config';
+import { resolve } from 'node:path';
+import { validateEnvironment } from './config/environment.js';
+import { DatabaseModule } from './database/database.module.js';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
 import { AnimalsModule } from './animals/animals.module.js';
@@ -15,7 +19,29 @@ import { VolunteerModule } from './volunteer/volunteer.module.js';
 import { AdoptionFairModule } from './adoption_fair/adoption_fair.module.js';
 
 @Module({
-  imports: [AnimalsModule, AdoptionModule, AdoptantModule, MedicalRecordModule, VaccineModule, ServiceModule, VeterinarianModule, ShelterModule, DonationModule, DonorModule, VolunteerModule, AdoptionFairModule],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: [
+        resolve(process.cwd(), '.env'),
+        resolve(process.cwd(), '../.env'),
+      ],
+      validate: validateEnvironment,
+    }),
+    DatabaseModule,
+    AnimalsModule,
+    AdoptionModule,
+    AdoptantModule,
+    MedicalRecordModule,
+    VaccineModule,
+    ServiceModule,
+    VeterinarianModule,
+    ShelterModule,
+    DonationModule,
+    DonorModule,
+    VolunteerModule,
+    AdoptionFairModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })

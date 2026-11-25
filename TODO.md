@@ -7,7 +7,7 @@
 - [x] Declaração inicial do uso de IA para correções dos modelos e recriação/correção do SQL (página 5).
 - [x] Estrutura inicial dos 12 resources NestJS gerada e registrada no `AppModule`.
 
-Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os resources têm DTOs/classes de entidade vazios e services com respostas de exemplo; o CRUD com persistência permanece pendente. O banco local foi iniciado e validado; a conexão do NestJS e os fluxos de negócio ainda precisam ser implementados e testados.
+Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os resources têm DTOs/classes de entidade vazios e services com respostas de exemplo; o CRUD com persistência permanece pendente. O banco local foi iniciado em 24/11/2026 e a conexão do NestJS foi validada em 25/11/2026, incluindo a rota HTTP de diagnóstico. Os fluxos de negócio ainda precisam ser implementados e testados.
 
 1. Preparar um banco reproduzível
 
@@ -43,9 +43,16 @@ As regras anotadas no MER fazem parte do modelo apresentado pelo grupo. As demai
 Critério de conclusão: dados inválidos e operações incompatíveis são rejeitados de forma previsível, sem deixar registros inconsistentes.
 
 3. Implementar a camada de persistência e a API
-- [ ] Adicionar e configurar o acesso ao SGBD no backend.
-- [ ] Organizar o acesso a dados em uma camada identificável, com consultas SQL.
-- [ ] Implementar consultas parametrizadas ou os mecanismos equivalentes da biblioteca escolhida.
+
+- [x] Instalar `@nestjs/config`, `pg` e os tipos do driver; carregar as credenciais do mesmo `.env` da raiz usado pelo Compose.
+- [x] Validar credenciais obrigatórias, host e portas; configuração local aponta para `127.0.0.1:5433`.
+- [x] Criar `DatabaseModule` e `DatabaseService` com pool compartilhado, timeout de conexão, verificação na inicialização e encerramento das conexões ao fechar a aplicação.
+- [x] Disponibilizar `DatabaseService.query(sql, values)` para consultas parametrizadas e validar que textos semelhantes a SQL são tratados como dados.
+- [x] Implementar `GET /health/database` com consulta real ao PostgreSQL; resposta HTTP 200 quando acessível e erro 503 sem detalhes internos quando indisponível.
+- [x] Validar a API compilada em uma porta temporária: inicialização com conexão real, diagnóstico HTTP 200 e encerramento por SIGTERM sem manter o processo ativo.
+- [x] Documentar no README a inicialização do NestJS, verificação da conexão e uso do `DatabaseService` nos futuros repositories.
+- [ ] Implementar os repositories das entidades usando o `DatabaseService`; a infraestrutura de conexão está pronta, mas as consultas do domínio ainda não existem.
+- [ ] Usar parâmetros em todas as consultas dos CRUDs quando forem implementadas.
 - [x] Gerar módulos, controllers, services, DTOs e classes de entidade para os 12 resources e registrar seus módulos no `AppModule`.
 - [ ] Preencher os DTOs e tipos de dados, substituir respostas de exemplo por consultas SQL e implementar os endpoints de negócio e das associações.
 - [ ] Adaptar os identificadores gerados: manter CPF, CNPJ e Documento como strings nos resources `adoptant`, `volunteer`, `veterinarian`, `shelter` e `donor`, removendo a conversão numérica `+id` nesses casos.
@@ -154,7 +161,7 @@ Critério de conclusão: uma pessoa leiga consegue operar o CRUD sem terminal, c
 - [ ] Verificar rollback da operação sobre várias tabelas.
 - [ ] Verificar View, Procedure, Trigger e recuperação do binário.
 - [ ] Ensaiar a inicialização completa em um ambiente limpo.
-Os testes atuais incluem o exemplo “Hello World” e testes gerados de instanciação dos controllers/services. Ainda não demonstram CRUD com persistência nem regras de negócio do PetMatch.
+Os testes incluem o exemplo “Hello World”, instanciação dos controllers/services, validação de configuração e tratamento de falha do diagnóstico. Em 25/11/2026, passaram 35 testes unitários e 4 testes e2e com PostgreSQL real (rota inicial, diagnóstico HTTP, parâmetros SQL e acesso às 16 tabelas). O build passou e o lint terminou sem erros, com avisos de parâmetros não usados nos services gerados. Ainda não demonstram CRUD com persistência nem regras de negócio do PetMatch.
 
 10. Preparar documentação e entrega
 

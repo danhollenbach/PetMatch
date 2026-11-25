@@ -69,7 +69,8 @@ Os seguintes itens devem ser versionados e disponibilizados no repositório do p
 
 O SGBD escolhido é **PostgreSQL**, com a imagem oficial `postgres:17-bookworm`.
 O Compose inicia apenas o banco; frontend e backend continuam sendo executados
-localmente. A conexão do NestJS ao banco ainda precisa ser implementada.
+localmente. O NestJS acessa o banco pelo módulo `backend/src/database`, usando
+o driver `pg` e consultas SQL parametrizadas.
 
 ### 1. Preparar o Docker e as variáveis
 
@@ -89,7 +90,9 @@ cp -n .env.example .env
 
 Edite o `.env` e escolha `POSTGRES_PASSWORD` antes de iniciar o banco pela primeira
 vez. O arquivo é ignorado pelo Git. Cada integrante deve criar seu próprio `.env`.
-O Compose lê esse arquivo da raiz; ele não configura automaticamente o backend.
+O Compose e o NestJS leem esse mesmo arquivo. `POSTGRES_HOST` e `PORT` são usados
+pelo backend; `POSTGRES_PORT` define a porta publicada pelo Docker e acessada pelo
+backend no computador. Não é necessário copiar a senha para outro arquivo.
 
 ### 2. Iniciar o banco
 
@@ -131,7 +134,7 @@ SELECT COUNT(*) FROM animal;
 O esquema inicial não inclui dados de exemplo, portanto a contagem começa em zero.
 Os nomes SQL sem aspas são apresentados em minúsculas pelo PostgreSQL.
 
-Para conectar uma ferramenta gráfica ou, depois, o backend executado no computador:
+Para conectar uma ferramenta gráfica ou o backend executado no computador:
 
 | Campo | Valor |
 | --- | --- |
@@ -197,11 +200,107 @@ $ npm run dev
 ```
 
 ## Para rodar o backend
-```bash
-cd backend/
-# development
-$ npm run start
 
-# watch mode
-$ npm run start:dev
+### 1. Iniciar banco e API
+
+Na raiz do projeto, com o `.env` já configurado:
+
+```bash
+docker compose up -d --wait
+cd backend
+npm ci
+npm run start:dev
 ```
+
+O `@nestjs/config` carrega o `.env` da raiz quando o comando é executado dentro
+de `backend/`. Se houver `backend/.env`, seus valores têm precedência sobre os da
+raiz; variáveis exportadas no terminal têm precedência sobre ambos. Prefira manter
+somente o `.env` da raiz para este ambiente local.
+
+A configuração valida credenciais obrigatórias e portas antes de iniciar a API.
+`POSTGRES_HOST` tem padrão `127.0.0.1`, `POSTGRES_PORT` tem padrão `5433` e `PORT`
+(porta HTTP da API) tem padrão `3000`. O `.env` local existente já foi ajustado.
+
+Na inicialização, o `DatabaseService` executa `SELECT 1`. O log esperado é:
+
+```text
+Conexão com PostgreSQL estabelecida.
+```
+
+Se a conexão inicial falhar, a API não começa a atender; confira Docker, porta e
+credenciais. Ao encerrar com Ctrl+C, as conexões do pool são fechadas.
+
+### 2. Verificar a conexão pela API
+
+Em outro terminal:
+
+```bash
+curl -i http://localhost:3000/health/database
+```
+
+Resposta esperada: HTTP 200 com o corpo abaixo. Ajuste `3000` se mudar `PORT`.
+
+```json
+{"status":"ok","database":"up"}
+```
+
+Essa rota executa uma consulta real a cada chamada. Se o banco ficar indisponível
+após a inicialização, retorna HTTP 503 com `{"status":"error","database":"down"}`,
+sem expor credenciais ou detalhes internos do driver.
+
+### 3. Usar a conexão nos CRUDs
+
+O `DatabaseModule` fornece e exporta um `DatabaseService` reutilizável. Para
+implementar um cadastro, importe `DatabaseModule` no módulo do resource e injete
+`DatabaseService` no repository. Registre o repository em `providers` e injete-o
+no service de negócio. O pool é compartilhado; não crie um novo `Pool` por resource.
+
+Exemplo de repository para uma futura consulta de animais (ainda não implementado):
+
+```typescript
+import { Injectable } from '@nestjs/common';
+import { DatabaseService } from '../database/database.service.js';
+
+@Injectable()
+export class AnimalsRepository {
+  constructor(private readonly database: DatabaseService) {}
+
+  async findById(id: number) {
+    const result = await this.database.query<{ id: number; nome: string }>(
+      'SELECT id, nome FROM animal WHERE id = $1',
+      [id],
+    );
+    return result.rows[0] ?? null;
+  }
+}
+```
+
+Passe valores separadamente em `$1`, `$2`, etc.; não concatene dados recebidos do
+usuário na string SQL. O método `query` executa uma consulta pelo pool. Operações
+com várias consultas em uma transação exigirão reservar o mesmo client para todo
+o fluxo; essa API de transações e os repositories dos CRUDs ainda estão pendentes.
+
+O caminho previsto é `Controller → Service → Repository → DatabaseService → PostgreSQL`.
+Os endpoints gerados dos cadastros ainda retornam exemplos; conectar o banco não
+implementa automaticamente os CRUDs. A aplicação não cria nem altera tabelas ao
+iniciar; o esquema continua sendo controlado pelos scripts SQL.
+
+### 4. Verificar o backend
+
+Execute dentro de `backend/`:
+
+```bash
+npm run build
+npm test
+npm run lint
+npm run test:e2e
+```
+
+Os testes unitários não precisam de PostgreSQL. Os testes e2e exigem o banco Docker
+iniciado e o `.env` configurado: verificam a rota HTTP de diagnóstico, consultas
+parametrizadas e acesso às 16 tabelas existentes, sem inserir ou remover dados.
+Não é necessário deixar outra instância da API aberta para executar esses testes.
+
+Referências: [configuração do NestJS](https://docs.nestjs.com/application/configuration),
+[pool de conexões](https://node-postgres.com/features/pooling) e
+[consultas parametrizadas](https://node-postgres.com/features/queries).
