@@ -3,22 +3,27 @@
 - [x] Modelo Entidade Relacionamento com 12 entidades de domínio (página 1).
 - [x] Modelo relacional com 16 tabelas, incluindo as associações (página 2).
 - [x] Script SQL de criação no documento (páginas 3 a 5) e em `backend/database/schema.sql`.
-- [x] Definição de chaves automáticas com `SERIAL` no script; execução ainda a verificar.
+- [x] Definição de chaves automáticas com `SERIAL` no script; geração de ID validada em VACINA no PostgreSQL local em 24/11/2026.
 - [x] Declaração inicial do uso de IA para correções dos modelos e recriação/correção do SQL (página 5).
 - [x] Estrutura inicial dos 12 resources NestJS gerada e registrada no `AppModule`.
 
-Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os resources têm DTOs/classes de entidade vazios e services com respostas de exemplo; o CRUD com persistência permanece pendente. A inspeção foi documental e de código, sem execução do banco ou da aplicação.
+Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os resources têm DTOs/classes de entidade vazios e services com respostas de exemplo; o CRUD com persistência permanece pendente. O banco local foi iniciado e validado; a conexão do NestJS e os fluxos de negócio ainda precisam ser implementados e testados.
 
 1. Preparar um banco reproduzível
 
-- [ ] Definir e documentar o SGBD utilizado. -> PostGRES ou SQLite?
-- [ ] Configurar uma instância local para desenvolvimento e apresentação.
-- [ ] Executar o schema.sql em um banco vazio e corrigir eventuais problemas.
-- [ ] Confirmar a criação das 16 tabelas, PKs, FKs e restrições de unicidade.
-- [ ] Inserir registros sem informar o ID nas tabelas com chave automática e verificar o resultado.
-- [ ] Documentar como criar e inicializar o banco.
-- [ ] Disponibilizar um arquivo de exemplo das variáveis de conexão, sem credenciais reais.
+- [x] Definir e documentar o SGBD: PostgreSQL, decisão confirmada em 24/11/2026. Ambiente local com Docker Compose e imagem `postgres:17-bookworm`, com suporte às Procedures exigidas no trabalho.
+- [x] Preparar `compose.yaml` com volume persistente, healthcheck, acesso em localhost e execução inicial de `backend/database/schema.sql`.
+- [x] Configurar uma instância local para desenvolvimento e apresentação; serviço `postgres` saudável em `127.0.0.1:5433` no OrbStack. Porta publicada ajustada em 25/11/2026 para evitar conflito com o PostgreSQL nativo na porta 5432, preservando o volume de dados.
+- [x] Executar o schema.sql em um banco vazio; inicialização automática concluída no PostgreSQL 17.12.
+- [x] Confirmar a criação das 16 tabelas, 16 PKs, 17 FKs e 4 restrições UNIQUE consultando os catálogos do banco.
+- [x] Inserir registro em VACINA sem informar o ID e verificar a geração automática; inserção revertida por rollback, sem deixar registros de teste.
+- [x] Recriar o container preservando o volume e confirmar a permanência das 16 tabelas e do estado da sequência de IDs.
+- [x] Documentar no README como configurar, iniciar, acessar e parar o banco, incluindo persistência e limitações da inicialização automática.
+- [x] Disponibilizar `.env.example` para o Compose e ignorar `.env` no Git.
 - [ ] Manter os scripts necessários à reconstrução do banco versionados.
+
+Validação local: `docker compose config --quiet`, inicialização com `docker compose up -d --wait`, conexão TCP autenticada dentro do container, consultas aos catálogos, inserção com rollback e recriação do container com volume preservado. O `.env` local foi criado com senha gerada e está ignorado pelo Git. A carga de demonstração e os testes das regras de integridade continuam pendentes.
+
 Critério de conclusão: outra pessoa consegue criar o banco a partir do repositório seguindo instruções explícitas.
 
 2. Completar as regras de integridade
