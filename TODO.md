@@ -1,3 +1,14 @@
+Atualizado em 25/11/2026.
+
+Situação atual: PostgreSQL local com Docker Compose e conexão do NestJS concluídos e validados. A próxima etapa é implementar os repositories e o CRUD de abrigos, seguido do CRUD de animais. Os cadastros ainda não persistem dados pela API.
+
+Entregas já registradas no Git:
+
+- [x] `3fa6bde` — `🔧 chore(docker): configurar PostgreSQL (🤖)`: Compose, volume persistente, inicialização do esquema, exemplo de ambiente e documentação do banco.
+- [x] `45d511c` — `✨ feat(nest): conectar PostgreSQL (🤖)`: configuração de ambiente, pool compartilhado, consultas parametrizadas, diagnóstico HTTP e testes.
+- [x] Acrescentar o sufixo ` (🤖)` aos dois commits feitos pelo assistente, preservando conteúdo e ordem.
+
+Base documental já disponível:
 
 - [x] Introdução com problema, objetivo e escopo do sistema (página 1).
 - [x] Modelo Entidade Relacionamento com 12 entidades de domínio (página 1).
@@ -19,8 +30,9 @@ Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os res
 - [x] Inserir registro em VACINA sem informar o ID e verificar a geração automática; inserção revertida por rollback, sem deixar registros de teste.
 - [x] Recriar o container preservando o volume e confirmar a permanência das 16 tabelas e do estado da sequência de IDs.
 - [x] Documentar no README como configurar, iniciar, acessar e parar o banco, incluindo persistência e limitações da inicialização automática.
-- [x] Disponibilizar `.env.example` para o Compose e ignorar `.env` no Git.
-- [ ] Manter os scripts necessários à reconstrução do banco versionados.
+- [x] Disponibilizar `.env.example` compartilhado pelo Compose e pelo NestJS e ignorar `.env` no Git.
+- [x] Versionar a base de reconstrução do banco: `compose.yaml`, `.env.example` e `backend/database/schema.sql`, com instruções no README.
+- [ ] Acrescentar e versionar os futuros scripts de população, alterações de esquema, View, Procedure e Triggers conforme forem implementados.
 
 Validação local: `docker compose config --quiet`, inicialização com `docker compose up -d --wait`, conexão TCP autenticada dentro do container, consultas aos catálogos, inserção com rollback e recriação do container com volume preservado. O `.env` local foi criado com senha gerada e está ignorado pelo Git. A carga de demonstração e os testes das regras de integridade continuam pendentes.
 
@@ -150,6 +162,11 @@ Critério de conclusão: a imagem continua recuperável a partir do banco após 
 Critério de conclusão: uma pessoa leiga consegue operar o CRUD sem terminal, comandos SQL ou chamadas manuais à API.
 
 9. Popular o banco e verificar os fluxos
+
+- [x] Validar o build do backend e executar 35 testes unitários em 25/11/2026.
+- [x] Executar 4 testes e2e com PostgreSQL real: rota inicial, diagnóstico HTTP, parâmetros SQL e acesso às 16 tabelas.
+- [x] Executar o lint sem erros; os avisos restantes são de parâmetros não usados nos services gerados.
+- [x] Verificar a inicialização e o encerramento da API compilada com conexão real, sem manter o processo de teste ativo.
 - [ ] Criar um script de população com dados fictícios coerentes.
 - [ ] Garantir pelo menos 10 registros nas tabelas principais.
 - [ ] Justificar quantidades menores quando a natureza dos dados exigir.
@@ -161,7 +178,8 @@ Critério de conclusão: uma pessoa leiga consegue operar o CRUD sem terminal, c
 - [ ] Verificar rollback da operação sobre várias tabelas.
 - [ ] Verificar View, Procedure, Trigger e recuperação do binário.
 - [ ] Ensaiar a inicialização completa em um ambiente limpo.
-Os testes incluem o exemplo “Hello World”, instanciação dos controllers/services, validação de configuração e tratamento de falha do diagnóstico. Em 25/11/2026, passaram 35 testes unitários e 4 testes e2e com PostgreSQL real (rota inicial, diagnóstico HTTP, parâmetros SQL e acesso às 16 tabelas). O build passou e o lint terminou sem erros, com avisos de parâmetros não usados nos services gerados. Ainda não demonstram CRUD com persistência nem regras de negócio do PetMatch.
+
+As verificações concluídas cobrem a infraestrutura, a configuração e a conexão ao banco. Ainda não demonstram CRUD com persistência, transações de negócio ou operações pelo frontend; esses testes permanecem pendentes.
 
 10. Preparar documentação e entrega
 
@@ -185,15 +203,16 @@ Reaproveitar o documento existente como base da entrega final. Introdução, mod
 - [ ] Atualizar o SQL reproduzido no PDF para que não divirja dos scripts finais do repositório, caso essa seção seja mantida.
 - [ ] Exportar um único PDF final com introdução, MER, modelo relacional, diagrama de mapeamento/persistência e declaração de IA atualizada.
 - [ ] Verificar a legibilidade dos diagramas no PDF final, especialmente o MER atualmente comprimido junto à introdução na página 1.
-- [ ] Atualizar as instruções de instalação, configuração, criação do banco, população e execução.
+- [x] Documentar no README a instalação das dependências, configuração do ambiente, criação do banco, execução do NestJS, diagnóstico da conexão e comandos de teste.
+- [ ] Complementar o README com os scripts de população e o roteiro de uso dos CRUDs quando estiverem implementados.
 - [ ] Confirmar SQL e código final disponíveis no GitHub.
-- [ ] Versionar o documento em `docs/` e o TODO; ambos ainda estavam sem rastreamento no Git na inspeção de 24/11/2026.
+- [x] Versionar o documento em `docs/` e o TODO; ambos constam no commit `6065f6e`. As atualizações de Docker e conexão foram incluídas nos dois commits registrados acima.
 - [ ] Confirmar a aprovação do tema e organizar a apresentação com todos os integrantes.
 - [ ] Confirmar a submissão do PDF final no Aprender3 na data correspondente ao grupo.
 
 O documento da primeira parte foi localizado em `docs/Projeto Final - Banco de Dados.pdf`. A existência do arquivo não confirma a submissão anterior nem a aprovação do tema.
 
-Prioridade de execução: banco reproduzível → persistência → primeiro CRUD completo pela interface → demais operações do domínio → adoção integrada e recursos SQL → binário → carga e verificações → documentação final. A revisão dos diagramas existentes e a complementação do PDF podem avançar em paralelo.
+Próximas prioridades: repository e CRUD de abrigos → repository e CRUD de animais → primeiro fluxo completo pela interface → demais operações do domínio → adoção integrada e recursos SQL → binário → carga e verificações → documentação final. O banco e a infraestrutura de conexão já estão prontos. A revisão dos diagramas existentes e a complementação do PDF podem avançar em paralelo.
 
 A especificação marca a apresentação final para 1º e 3 de dezembro de 2026 e condiciona a avaliação ao projeto estar funcionando. O primeiro marco deve ser conseguir cadastrar, listar, editar e excluir um animal pela interface, com persistência real e vínculo válido com um abrigo.
 
