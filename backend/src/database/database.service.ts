@@ -25,6 +25,10 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     return this.pool.query<Row>(sql, values);
   }
 
+  connect() {
+    return this.pool.connect();
+  }
+
   async onModuleDestroy(): Promise<void> {
     await this.pool.end();
   }
