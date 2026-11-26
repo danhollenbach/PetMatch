@@ -14,7 +14,7 @@ export const resources: Record<string, Table> = {
   prontuarios: 'prontuario', atendimentos: 'atendimento', vacinas: 'vacina', feiras: 'feira_adocao',
 };
 function tableFor(resource: string) {
-  const table = resources[resource];
+  const table = Object.hasOwn(resources, resource) ? resources[resource] : undefined;
   if (!table) throw new NotFoundException('Recurso inexistente.');
   return table;
 }
@@ -70,6 +70,32 @@ export class DomainService {
     const type = kind === 'voluntarios' ? 'voluntario' : 'veterinario';
     if (cpf) keyFor(type, cpf);
     return this.repository.transaction(teamWrites, u => cpf ? unlinkTeam(u, cnpj, cpf, type) : saveTeam(u, cnpj, type, body));
+  }
+  members(cnpj: string, kind: string) {
+    keyFor('abrigo', cnpj);
+    if (!['voluntarios','veterinarios'].includes(kind)) throw new NotFoundException('Equipe inexistente.');
+    return this.repository.transaction([], async u => {
+      u.require('abrigo', { cnpj });
+      return kind === 'voluntarios' ? u.db.atua.filter(a => a.cnpj_abrigo === cnpj)
+        : u.db.vinculo.filter(v => v.cnpj_abrigo === cnpj);
+    });
+  }
+  participation(value: string, input?: unknown) {
+    const fairId = id(value);
+    return this.repository.transaction(input === undefined ? [] : fairWrites, async u => {
+      const { id: _id, ...feira } = u.require('feira_adocao', { id: fairId });
+      if (input === undefined) return u.db.participa.filter(p => p.id_feira_adocao === fairId);
+      const body = object(input);
+      if (Object.keys(body).some(key => key !== 'participantes')) throw new BadRequestException('Informe apenas participantes.');
+      return saveFair(u, { feira, participantes: body.participantes }, fairId);
+    });
+  }
+  listApplications(value: string) {
+    const recordId = id(value);
+    return this.repository.transaction([], async u => {
+      u.require('prontuario', { id: recordId });
+      return u.db.aplicacao.filter(a => a.id_prontuario === recordId);
+    });
   }
   applications(record: string, body: unknown, vaccine?: string, dose?: string, remove = false) {
     const recordId = id(record);

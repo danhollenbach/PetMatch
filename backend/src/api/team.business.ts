@@ -24,8 +24,8 @@ export async function unlinkTeam(u: UnitOfWork, cnpj: string, cpf: string, kind:
   u.require('abrigo', { cnpj });
   if (kind === 'veterinario') return u.remove('vinculo', { cnpj_abrigo: cnpj, cpf_veterinario: cpf });
   const fairs = new Set(u.db.feira_adocao.filter(f => f.cnpj_abrigo === cnpj).map(f => f.id));
-  for (const participation of [...u.db.participa]) {
-    if (participation.cpf_voluntario === cpf && fairs.has(participation.id_feira_adocao)) await u.remove('participa', participation);
+  for (const participation of u.db.participa.filter(p => p.cpf_voluntario === cpf && fairs.has(p.id_feira_adocao))) {
+    await u.remove('participa', participation);
   }
   return u.remove('atua', { cnpj_abrigo: cnpj, cpf_voluntario: cpf });
 }
@@ -42,12 +42,12 @@ export async function saveFair(u: UnitOfWork, input: unknown, id?: number) {
     check(u.find('atua', key), 'Participantes devem pertencer à equipe do abrigo.');
   }
   const saved = id === undefined ? await u.insert('feira_adocao', fair) : await u.update('feira_adocao', { ...fair, id });
-  for (const p of [...u.db.participa]) if (p.id_feira_adocao === saved.id) await u.remove('participa', p);
+  for (const p of u.db.participa.filter(p => p.id_feira_adocao === saved.id)) await u.remove('participa', p);
   for (const cpf of cpfs) await u.insert('participa', { id_feira_adocao: saved.id, cpf_voluntario: cpf as string });
   return saved;
 }
 export async function deleteFair(u: UnitOfWork, id: number) {
   u.require('feira_adocao', { id });
-  for (const p of [...u.db.participa]) if (p.id_feira_adocao === id) await u.remove('participa', p);
+  for (const p of u.db.participa.filter(p => p.id_feira_adocao === id)) await u.remove('participa', p);
   return u.remove('feira_adocao', { id });
 }

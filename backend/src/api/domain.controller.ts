@@ -19,6 +19,10 @@ export class DomainController {
   @Delete('prontuarios/:id/aplicacoes/:vacina/:dose') removeApplication(@Param('id') id: string, @Param('vacina') vaccine: string, @Param('dose') dose: string) {
     return this.domain.applications(id, undefined, vaccine, dose, true);
   }
+  @Get('abrigos/:cnpj/equipe/:kind') members(@Param('cnpj') cnpj: string, @Param('kind') kind: string) { return this.domain.members(cnpj, kind); }
+  @Get('feiras/:id/participantes') participants(@Param('id') id: string) { return this.domain.participation(id); }
+  @Put('feiras/:id/participantes') replaceParticipants(@Param('id') id: string, @Body() body: unknown) { return this.domain.participation(id, body); }
+  @Get('prontuarios/:id/aplicacoes') applications(@Param('id') id: string) { return this.domain.listApplications(id); }
   @Get(':resource') list(@Param('resource') resource: string) { return this.domain.list(resource); }
   @Get(':resource/:id') get(@Param('resource') resource: string, @Param('id') id: string) { return this.domain.get(resource, id); }
   @Post(':resource') create(@Param('resource') resource: string, @Body() body: unknown) { return this.domain.create(resource, body); }

@@ -26,7 +26,7 @@ export async function decideAdoption(u: UnitOfWork, id: number, input: unknown) 
   if (value.status === 'aprovado') {
     check(animal.status === 'disponivel', 'Animal indisponível para adoção.');
     await u.update('animal', { ...animal, status: 'adotado' });
-    for (const other of [...u.db.pedido_adocao]) {
+    for (const other of u.db.pedido_adocao.filter(p => p.id !== id && p.id_animal === animal.id && p.status === 'pendente')) {
       if (other.id !== id && other.id_animal === animal.id && other.status === 'pendente') {
         await u.update('pedido_adocao', { ...other, status: 'reprovado', data_decisao: today() });
       }
