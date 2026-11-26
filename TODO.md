@@ -72,7 +72,7 @@ O esquema já define relacionamentos e algumas restrições importantes. Por exe
 - [x] Definir coerência entre data do pedido e data da decisão.
 - [x] Definir como tratar exclusão de registros referenciados: bloquear, remover vínculos ou outra regra justificada.
 - [x] Definir quando um animal pode ser adotado e como impedir aprovações incompatíveis.
-- [ ] Implementar as regras já anotadas no MER: aprovação de pedido marca o animal como adotado; pedido para animal indisponível é bloqueado; peso informado no atendimento atualiza o prontuário.
+- [x] Implementar no backend as regras do MER: aprovação adota, indisponibilidade bloqueia pedido e peso segue a última medição. Triggers e validação no banco continuam pendentes.
 - [ ] Alinhar a relação ANIMAL–PRONTUARIO entre MER, modelo relacional e implementação. O MER indica 1:1 obrigatório; o modelo relacional traz uma anotação de correção; `Id_animal NOT NULL UNIQUE` impede dois prontuários para o mesmo animal, mas sozinho não garante que todo animal tenha prontuário.
 - [ ] Aplicar as validações pertinentes no banco e no backend.
 As regras anotadas no MER fazem parte do modelo apresentado pelo grupo. As demais são recomendações para tornar o domínio consistente; o enunciado exige demonstrar integridade, mas não prescreve cada regra de negócio.
