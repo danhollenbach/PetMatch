@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DomainRepository, writes } from './repository.js';
-import { animalWrites, saveAnimal, deleteAnimal, registerShelter, shelterWrites } from './animals.business.js';
+import { animalDeleteWrites, animalWrites, saveAnimal, deleteAnimal, registerShelter, shelterWrites } from './animals.business.js';
 import { adoptionWrites, requestAdoption, decideAdoption } from './adoption.business.js';
 import { clinicalWrites, saveVisit, deleteVisit, applicationWrites, saveApplication } from './clinical.business.js';
 import { teamWrites, saveTeam, unlinkTeam, fairWrites, saveFair, deleteFair } from './team.business.js';
@@ -55,7 +55,7 @@ export class DomainService {
   }
   remove(resource: string, value: string) {
     const table = tableFor(resource), key = keyFor(table, value);
-    if (table === 'animal') return this.repository.transaction(animalWrites, u => deleteAnimal(u, id(value)));
+    if (table === 'animal') return this.repository.transaction(animalDeleteWrites, u => deleteAnimal(u, id(value)));
     if (table === 'atendimento') return this.repository.transaction(clinicalWrites, u => deleteVisit(u, id(value)));
     if (table === 'feira_adocao') return this.repository.transaction(fairWrites, u => deleteFair(u, id(value)));
     return this.repository.transaction(writes([table,'delete']), u => deleteSimple(u, table, key));

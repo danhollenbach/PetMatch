@@ -40,6 +40,7 @@ export class UnitOfWork {
     else rows.push(row);
     return row;
   }
+  execute(query: Query, params: unknown[]) { return this.run(query, params); }
   insert<K extends Table>(table: K, data: Partial<Row<K>>) { return this.write(table, 'insert', data); }
   update<K extends Table>(table: K, data: Row<K>) { this.require(table, data); return this.write(table, 'update', data); }
   remove<K extends Table>(table: K, data: Partial<Row<K>>) { this.require(table, data); return this.write(table, 'delete', data); }

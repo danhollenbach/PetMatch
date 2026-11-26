@@ -1,9 +1,11 @@
+import { photoQueries } from './photo.queries.js';
 import { BadRequestException } from '@nestjs/common';
 import { check, capacity, noHistory, assertKeys } from './rules.js';
 import { object, validate, past } from './schema.js';
 import { type UnitOfWork, writes } from './repository.js';
 
 export const animalWrites = writes(['animal','insert','update','delete'], ['prontuario','insert','update','delete']);
+export const animalDeleteWrites = [...animalWrites, photoQueries.delete];
 export async function saveAnimal(u: UnitOfWork, input: unknown, id?: number) {
   const body = object(input);
   assertKeys(body, ['animal','prontuario']);
@@ -39,6 +41,7 @@ export async function deleteAnimal(u: UnitOfWork, id: number) {
   const animal = u.require('animal', { id });
   check(animal.status !== 'adotado', 'Não é permitido excluir animal adotado.');
   const record = noHistory(u, id);
+  await u.execute(photoQueries.delete, [id]);
   if (record) await u.remove('prontuario', record);
   return u.remove('animal', animal);
 }

@@ -1,3 +1,4 @@
+import { PhotoController } from './photo.controller.js';
 import { Module } from '@nestjs/common';
 import { DatabaseModule } from '../database/database.module.js';
 import { DomainController } from './domain.controller.js';
@@ -7,7 +8,7 @@ import { QueryRunner } from './query-runner.js';
 
 @Module({
   imports: [DatabaseModule],
-  controllers: [DomainController],
+  controllers: [DomainController, PhotoController],
   providers: [DomainService, DomainRepository, QueryRunner],
 })
 export class DomainModule {}
