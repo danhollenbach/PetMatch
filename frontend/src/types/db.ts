@@ -148,7 +148,7 @@ export interface Participa {
   id_feira_adocao: number
 }
 
-/** O "banco" em memória: uma lista por tabela. */
+/** Snapshot carregado pela API: uma lista por tabela. */
 export interface Database {
   doador: Doador[]
   abrigo: Abrigo[]

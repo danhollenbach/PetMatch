@@ -1,102 +1,41 @@
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react"
 import { createApiActions } from "./actions"
-import { request } from "@/lib/api"
-import { createContext, useContext, useState, type ReactNode } from "react"
-import { mockDb } from "@/data/mock"
-import type {
-  Database,
-  FeiraAdocao,
-  Veterinario,
-  Voluntario,
-} from "@/types/db"
+import { ApiError, request } from "@/lib/api"
+import type { Database } from "@/types/db"
 
-/**
- * "Banco" em memória. Cada ação valida as mesmas restrições do schema SQL
- * (PK, UNIQUE, FK, Capacidade) e lança DbError com a mensagem para o usuário.
- * Quando o backend existir, cada ação vira uma chamada à API.
- */
-export class DbError extends Error {}
-
-type WithOptionalId<T> = Omit<T, "id"> & { id?: number }
-
-const nextId = (rows: { id: number }[]) => rows.reduce((max, r) => Math.max(max, r.id), 0) + 1
-
-function upsert<T>(rows: T[], row: T, same: (r: T) => boolean): T[] {
-  return rows.some(same) ? rows.map((r) => (same(r) ? row : r)) : [...rows, row]
-}
-
-function createActions(db: Database, commit: (next: Database) => void) {
-  return {
-    ...createApiActions(async () => { commit(await request<Database>("/dados")) }),
-
-    /** Cria/atualiza o VOLUNTARIO e o vínculo ATUA (com a Função) no abrigo. */
-    salvarVoluntario(cnpj: string, voluntario: Voluntario, funcao: string) {
-      commit({
-        ...db,
-        voluntario: upsert(db.voluntario, voluntario, (v) => v.cpf === voluntario.cpf),
-        atua: upsert(
-          db.atua,
-          { cnpj_abrigo: cnpj, cpf_voluntario: voluntario.cpf, funcao },
-          (a) => a.cnpj_abrigo === cnpj && a.cpf_voluntario === voluntario.cpf
-        ),
-      })
-    },
-
-    /** Remove o ATUA e as participações (PARTICIPA) do voluntário nas feiras deste abrigo. */
-    removerVoluntario(cnpj: string, cpf: string) {
-      const feiras = new Set(db.feira_adocao.filter((f) => f.cnpj_abrigo === cnpj).map((f) => f.id))
-      commit({
-        ...db,
-        atua: db.atua.filter((a) => !(a.cnpj_abrigo === cnpj && a.cpf_voluntario === cpf)),
-        participa: db.participa.filter((p) => !(p.cpf_voluntario === cpf && feiras.has(p.id_feira_adocao))),
-      })
-    },
-
-    /** Cria/atualiza o VETERINARIO e garante o VINCULO com o abrigo. */
-    salvarVeterinario(cnpj: string, vet: Veterinario) {
-      if (db.veterinario.some((v) => v.crmv.toUpperCase() === vet.crmv.toUpperCase() && v.cpf !== vet.cpf))
-        throw new DbError("Este CRMV já pertence a outro veterinário.")
-      const vinculado = db.vinculo.some((v) => v.cnpj_abrigo === cnpj && v.cpf_veterinario === vet.cpf)
-      commit({
-        ...db,
-        veterinario: upsert(db.veterinario, vet, (v) => v.cpf === vet.cpf),
-        vinculo: vinculado ? db.vinculo : [...db.vinculo, { cnpj_abrigo: cnpj, cpf_veterinario: vet.cpf }],
-      })
-    },
-
-    removerVinculo(cnpj: string, cpf: string) {
-      commit({ ...db, vinculo: db.vinculo.filter((v) => !(v.cnpj_abrigo === cnpj && v.cpf_veterinario === cpf)) })
-    },
-
-    /** Cria/edita a FEIRA_ADOCAO e substitui a lista de voluntários (PARTICIPA). */
-    salvarFeira(feira: WithOptionalId<FeiraAdocao>, participantes: string[]) {
-      const id = feira.id ?? nextId(db.feira_adocao)
-      commit({
-        ...db,
-        feira_adocao: upsert(db.feira_adocao, { ...feira, id }, (f) => f.id === id),
-        participa: [
-          ...db.participa.filter((p) => p.id_feira_adocao !== id),
-          ...participantes.map((cpf) => ({ cpf_voluntario: cpf, id_feira_adocao: id })),
-        ],
-      })
-    },
-
-    removerFeira(id: number) {
-      commit({
-        ...db,
-        feira_adocao: db.feira_adocao.filter((f) => f.id !== id),
-        participa: db.participa.filter((p) => p.id_feira_adocao !== id),
-      })
-    },
-  }
-}
-
-type DbContextValue = { db: Database; actions: ReturnType<typeof createActions> }
-
+type DbContextValue = { db: Database; actions: ReturnType<typeof createApiActions> }
 const DbContext = createContext<DbContextValue | null>(null)
 
 export function DbProvider({ children }: { children: ReactNode }) {
-  const [db, setDb] = useState<Database>(mockDb)
-  const actions = createActions(db, setDb)
+  const [db, setDb] = useState<Database | null>(null)
+  const [error, setError] = useState<Error | null>(null)
+  const [loading, setLoading] = useState(true)
+  const generation = useRef(0)
+  const reload = useCallback(async (saved = false) => {
+    const current = ++generation.current
+    try {
+      const data = await request<Database>("/dados")
+      if (generation.current !== current) return
+      setDb(data); setError(null)
+    } catch (cause) {
+      if (generation.current !== current) return
+      const failure = cause instanceof Error ? cause : new Error("Falha ao carregar dados.")
+      // A escrita já confirmou: não lançar erro que incentive repetir uma inclusão.
+      setError(saved ? new Error(`Operação salva. Não foi possível atualizar a tela: ${failure.message} Recarregue os dados antes de continuar.`) : failure)
+    } finally { if (generation.current === current) setLoading(false) }
+  }, [])
+  useEffect(() => { void reload(); return () => { generation.current++ } }, [reload])
+  const actions = createApiActions(() => reload(true))
+  if (loading) return <main className="grid min-h-screen place-content-center p-8" role="status">Carregando PetMatch…</main>
+  if (error || !db) return <main className="mx-auto grid min-h-screen max-w-xl content-center gap-4 p-8">
+    <h1 className="text-2xl font-semibold">{error instanceof ApiError && error.code === "SQL_NOT_IMPLEMENTED" ? "Banco aguardando consultas" : "Dados indisponíveis"}</h1>
+    <p role="alert">{error?.message ?? "Não foi possível carregar os dados."}</p>
+    {error instanceof ApiError && error.queries.length > 0 && <details>
+      <summary>Consultas pendentes</summary>
+      <ul className="mt-2 list-inside list-disc text-sm">{error.queries.map(query => <li key={query}>{query}</li>)}</ul>
+    </details>}
+    <button className="rounded-xl bg-primary p-3 text-primary-foreground" onClick={() => { setLoading(true); void reload() }}>Tentar novamente</button>
+  </main>
   return <DbContext.Provider value={{ db, actions }}>{children}</DbContext.Provider>
 }
 

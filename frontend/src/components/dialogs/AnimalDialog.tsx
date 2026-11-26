@@ -86,7 +86,7 @@ function AnimalFormBody({ cnpj, animal, close }: { cnpj: string; animal?: Animal
     }
   }
 
-  const statusOptions = (Object.keys(statusAnimalLabel) as StatusAnimal[]).map((s) => ({ value: s, label: statusAnimalLabel[s] }))
+  const statusOptions = (Object.keys(statusAnimalLabel) as StatusAnimal[]).filter((s) => animal?.status === "adotado" ? s === "adotado" : s !== "adotado").map((s) => ({ value: s, label: statusAnimalLabel[s] }))
 
   return (
     <AsyncForm onSubmit={submit} className="grid gap-5">
