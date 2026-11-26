@@ -75,8 +75,8 @@ function AnimalFormBody({ cnpj, animal, close }: { cnpj: string; animal?: Animal
     }
     let id = animal?.id
     const ok = await attempt(
-      () => {
-        id = actions.salvarAnimal({ ...a, id: animal?.id, nome: a.nome.trim(), raca: a.raca.trim() }, prontuario)
+      async () => {
+        id = await actions.salvarAnimal({ ...a, id: animal?.id, nome: a.nome.trim(), raca: a.raca.trim() }, prontuario)
       },
       animal ? "Cadastro atualizado." : `${a.nome} foi cadastrado(a)!`
     )

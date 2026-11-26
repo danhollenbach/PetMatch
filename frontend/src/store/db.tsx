@@ -1,19 +1,14 @@
+import { createApiActions } from "./actions"
+import { request } from "@/lib/api"
 import { createContext, useContext, useState, type ReactNode } from "react"
 import { mockDb } from "@/data/mock"
-import { ocupacao } from "@/lib/queries"
 import { today } from "@/lib/format"
 import type {
-  Abrigo,
   Adotante,
-  Animal,
-  Aplicacao,
-  Atendimento,
   Database,
   Doacao,
   Doador,
-  EspecieAlvo,
   FeiraAdocao,
-  Prontuario,
   Veterinario,
   Voluntario,
 } from "@/types/db"
@@ -34,88 +29,8 @@ function upsert<T>(rows: T[], row: T, same: (r: T) => boolean): T[] {
 }
 
 function createActions(db: Database, commit: (next: Database) => void) {
-  const checkCapacidade = (cnpj: string) => {
-    const abrigo = db.abrigo.find((a) => a.cnpj === cnpj)
-    if (abrigo && ocupacao(db, cnpj) >= abrigo.capacidade)
-      throw new DbError(`O abrigo está lotado (${abrigo.capacidade}/${abrigo.capacidade}).`)
-  }
-
   return {
-    registrarAbrigo(abrigo: Abrigo, gestor: Voluntario) {
-      if (db.abrigo.some((a) => a.cnpj === abrigo.cnpj))
-        throw new DbError("Já existe um abrigo cadastrado com este CNPJ.")
-      commit({
-        ...db,
-        abrigo: [...db.abrigo, abrigo],
-        voluntario: upsert(db.voluntario, gestor, (v) => v.cpf === gestor.cpf),
-        atua: [...db.atua, { cnpj_abrigo: abrigo.cnpj, cpf_voluntario: gestor.cpf, funcao: "Coordenação" }],
-      })
-    },
-
-    atualizarAbrigo(abrigo: Abrigo) {
-      const ocup = ocupacao(db, abrigo.cnpj)
-      if (abrigo.capacidade < ocup)
-        throw new DbError(`A capacidade não pode ser menor que a ocupação atual (${ocup}).`)
-      commit({ ...db, abrigo: db.abrigo.map((a) => (a.cnpj === abrigo.cnpj ? abrigo : a)) })
-    },
-
-    /** Cria/edita ANIMAL + PRONTUARIO juntos (relação 1:1). Retorna o Id do animal. */
-    salvarAnimal(animal: WithOptionalId<Animal>, pront: Omit<Prontuario, "id" | "id_animal">) {
-      const anterior = db.animal.find((a) => a.id === animal.id)
-      const passaAOcupar = animal.status !== "adotado" && (!anterior || anterior.status === "adotado")
-      if (passaAOcupar) checkCapacidade(animal.cnpj_abrigo)
-
-      if (anterior) {
-        commit({
-          ...db,
-          animal: db.animal.map((a) => (a.id === anterior.id ? { ...animal, id: anterior.id } : a)),
-          prontuario: db.prontuario.map((p) => (p.id_animal === anterior.id ? { ...p, ...pront } : p)),
-        })
-        return anterior.id
-      }
-      const id = nextId(db.animal)
-      commit({
-        ...db,
-        animal: [...db.animal, { ...animal, id }],
-        prontuario: [...db.prontuario, { ...pront, id: nextId(db.prontuario), id_animal: id }],
-      })
-      return id
-    },
-
-    registrarAtendimento(at: Omit<Atendimento, "id">) {
-      commit({
-        ...db,
-        atendimento: [...db.atendimento, { ...at, id: nextId(db.atendimento) }],
-        // o peso medido no atendimento passa a ser o peso atual do prontuário
-        prontuario:
-          at.peso == null
-            ? db.prontuario
-            : db.prontuario.map((p) => (p.id === at.id_prontuario ? { ...p, peso: at.peso } : p)),
-      })
-    },
-
-    /** Registra a aplicação, criando a VACINA antes caso `novaVacina` seja informada. */
-    registrarAplicacao(
-      ap: Omit<Aplicacao, "id_vacina"> & { id_vacina: number | null },
-      novaVacina?: { nome: string; especie_alvo: EspecieAlvo }
-    ) {
-      let vacinas = db.vacina
-      let idVacina = ap.id_vacina
-      if (novaVacina) {
-        if (vacinas.some((v) => v.nome.toLowerCase() === novaVacina.nome.toLowerCase()))
-          throw new DbError(`Já existe uma vacina chamada "${novaVacina.nome}".`)
-        idVacina = nextId(vacinas)
-        vacinas = [...vacinas, { id: idVacina, ...novaVacina }]
-      }
-      if (idVacina == null) throw new DbError("Selecione uma vacina.")
-      if (
-        db.aplicacao.some(
-          (a) => a.id_prontuario === ap.id_prontuario && a.id_vacina === idVacina && a.dose === ap.dose
-        )
-      )
-        throw new DbError(`A dose ${ap.dose} desta vacina já foi registrada.`)
-      commit({ ...db, vacina: vacinas, aplicacao: [...db.aplicacao, { ...ap, id_vacina: idVacina }] })
-    },
+    ...createApiActions(async () => { commit(await request<Database>("/dados")) }),
 
     /** Cria (ou atualiza) o ADOTANTE e abre um PEDIDO_ADOCAO pendente. */
     solicitarAdocao(adotante: Adotante, idAnimal: number) {
