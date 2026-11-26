@@ -15,7 +15,7 @@ function normalize<K extends Table>(table: K, input: Record<string, unknown>): R
     }
     result[name] = value;
   }
-  return result as Row<K>;
+  return result as unknown as Row<K>;
 }
 export class UnitOfWork {
   constructor(readonly db: Database, private readonly run: Executor) {}

@@ -68,7 +68,7 @@ export function validate<K extends Table>(table: K, input: unknown, omit: string
     if (!valid) throw new BadRequestException(`Campo inválido: ${name}.`);
     result[name] = name === 'email' ? (v as string).toLowerCase() : name === 'crmv' ? (v as string).toUpperCase() : v;
   }
-  return result as Row<K>;
+  return result as unknown as Row<K>;
 }
 export const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo' }).format(new Date());
 export function past(value: string | null) {
