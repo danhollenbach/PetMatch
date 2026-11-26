@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { validateCommand } from './input.js';
 import { DomainRepository, writes } from './repository.js';
 import { animalDeleteWrites, animalWrites, saveAnimal, deleteAnimal, registerShelter, shelterWrites } from './animals.business.js';
 import { adoptionWrites, requestAdoption, decideAdoption } from './adoption.business.js';
@@ -34,6 +35,7 @@ export class DomainService {
   }
   create(resource: string, body: unknown) {
     const table = tableFor(resource);
+    validateCommand(table, body);
     if (table === 'abrigo') return this.repository.transaction(shelterWrites, u => registerShelter(u, body));
     if (table === 'animal') return this.repository.transaction(animalWrites, u => saveAnimal(u, body));
     if (table === 'pedido_adocao') return this.repository.transaction(adoptionWrites, u => requestAdoption(u, body));
@@ -45,16 +47,19 @@ export class DomainService {
   update(resource: string, value: string, body: unknown) {
     const table = tableFor(resource), key = keyFor(table, value);
     if (table === 'pedido_adocao') throw new BadRequestException('Use a rota de decisão. Pedidos finalizados são imutáveis.');
+    if (['animal','atendimento','doacao','feira_adocao'].includes(table)) validateCommand(table, body, true);
     if (table === 'animal') return this.repository.transaction(animalWrites, u => saveAnimal(u, body, id(value)));
     if (table === 'atendimento') return this.repository.transaction(clinicalWrites, u => saveVisit(u, body, id(value)));
     if (table === 'doacao') return this.repository.transaction(donationWrites, u => saveDonation(u, body, id(value)));
     if (table === 'feira_adocao') return this.repository.transaction(fairWrites, u => saveFair(u, body, id(value)));
     const input = object(body);
     for (const [name, v] of Object.entries(key)) if (input[name] !== undefined && input[name] !== v) throw new BadRequestException('Chave primária é imutável.');
+    validateCommand(table, { ...input, ...key }, true);
     return this.repository.transaction(writes([table,'update'], ['prontuario','update'], ['animal','update']), u => saveSimple(u, table, { ...input, ...key }, key));
   }
   remove(resource: string, value: string) {
     const table = tableFor(resource), key = keyFor(table, value);
+    if (table === 'prontuario' || table === 'pedido_adocao') throw new BadRequestException('Este registro não pode ser excluído isoladamente.');
     if (table === 'animal') return this.repository.transaction(animalDeleteWrites, u => deleteAnimal(u, id(value)));
     if (table === 'atendimento') return this.repository.transaction(clinicalWrites, u => deleteVisit(u, id(value)));
     if (table === 'feira_adocao') return this.repository.transaction(fairWrites, u => deleteFair(u, id(value)));
@@ -62,6 +67,8 @@ export class DomainService {
   }
   decide(value: string, body: unknown) {
     const number = id(value);
+    const input = object(body);
+    if (Object.keys(input).some(key => key !== 'decisao') || !['aprovado','reprovado'].includes(String(input.decisao))) throw new BadRequestException('Informe apenas decisão aprovado ou reprovado.');
     return this.repository.transaction(adoptionWrites, u => decideAdoption(u, number, body));
   }
   team(cnpj: string, kind: string, body: unknown, cpf?: string) {
