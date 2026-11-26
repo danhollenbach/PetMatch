@@ -1,13 +1,13 @@
-# PetMatch — Frontend (protótipo)
+# PetMatch — Frontend integrado à API
 
 Interface do Sistema Integrado de Abrigos e Adoção de Animais.
 React 19 + TypeScript + Vite + Tailwind CSS v4 + shadcn/ui (preset Maia, base Radix, ícones Lucide).
 
-> Apenas frontend. Os dados ficam **em memória** (arrays TypeScript + React Context) e são
-> reiniciados ao recarregar a página.
+> Conectado ao NestJS por HTTP. Não há persistência simulada. As queries SQL estão
+> vazias para implementação manual; até preenchê-las, a interface informa a pendência.
 
 ```bash
-npm install
+npm ci
 npm run dev      # http://localhost:5173
 npm run build    # type-check + build de produção
 ```
@@ -44,27 +44,44 @@ Na barra superior:
 | VETERINARIO + VINCULO | Painel → Equipe (vincular, editar, desvincular) |
 | FEIRA_ADOCAO + PARTICIPA | Painel → Feiras (criar, editar, excluir, escalar voluntários) |
 
-## Regras implementadas no mock
+## Integração
 
-As ações em `src/store/db.tsx` validam as mesmas restrições do schema e lançam `DbError` com uma mensagem amigável:
+Inicie PostgreSQL e NestJS conforme o [README da raiz](../README.md). O proxy do
+Vite encaminha `/api` para `http://127.0.0.1:3000`; ajuste `vite.config.ts` se
+alterar a porta do backend.
 
-- PK/UNIQUE: CNPJ do abrigo, e-mail do adotante, CRMV, nome da vacina, `(prontuário, vacina, dose)`.
-- Capacidade: ocupação = animais do abrigo que não estão `adotado`. Não é possível cadastrar (ou "desadotar") acima do limite.
-- Aprovar um pedido define `status = 'aprovado'` e `data_decisao` no pedido, marca o animal como `adotado`
-  e reprova automaticamente os demais pedidos pendentes do mesmo animal.
-- Um atendimento com peso atualiza o peso atual do prontuário.
-- Remover um voluntário da equipe também remove as participações dele nas feiras daquele abrigo.
-- CPF/CNPJ/CEP/telefone já existentes (adotante, doador, voluntário, veterinário) são detectados e os dados preenchidos.
+A carga inicial usa `GET /api/dados`. As ações de `store/actions.ts` chamam a API
+e recarregam os dados após gravar. Formulários esperam a resposta, bloqueiam
+envio duplicado e preservam campos em erros. A seleção de abrigo continua sendo
+uma **sessão de demonstração, sem autenticação**.
+
+As regras definitivas ficam no backend: capacidade, disponibilidade, decisões
+imutáveis, unicidade, vínculos e coerência clínica. Os seletores locais apenas
+montam a apresentação a partir do snapshot recebido.
+
+O perfil do animal permite enviar/substituir/remover foto JPEG/PNG de até 5 MiB.
+Sem foto, usa a ilustração de espécie; falhas e queries pendentes têm mensagem.
+A API de foto aguarda alteração manual do esquema e implementação das queries.
+
+Consulte [API.md](../docs/API.md), [SQL_BACKEND.md](../docs/SQL_BACKEND.md) e
+[TODO.md](../TODO.md) para contratos e pendências. Build e lint:
+
+```bash
+npm run build
+npm run lint
+```
 
 ## Estrutura
 
 ```
 src/
   types/db.ts          tipos espelhando as tabelas SQL
-  data/mock.ts         dados fictícios (4 abrigos, 22 animais, …)
-  store/db.tsx         "banco" em memória + ações de escrita (CRUD)
+  data/mock.ts         referência histórica do protótipo; não importada em runtime
+  store/db.tsx         snapshot remoto, carregamento e falhas
+  store/actions.ts     mutações HTTP e recarga após sucesso
+  lib/api.ts           transporte e erros da API
   store/session.tsx    sessão (visitante / abrigo) e cor de destaque
-  lib/queries.ts       leituras com "JOINs" (equivalentes às futuras consultas SQL)
+  lib/queries.ts       seletores de apresentação sobre dados recebidos da API
   lib/format.ts        máscaras, datas, moeda e rótulos pt-BR
   components/          layout, cards, diálogos (modais) e componentes compartilhados
   pages/               Catálogo, Animal, Abrigo e Painel (+ abas em pages/panel)
@@ -76,8 +93,7 @@ src/
   identificadores não-citados. Assim, as linhas das consultas SQL puras do NestJS encaixam direto nos tipos.
 - `DATE` é uma string `YYYY-MM-DD`. Documentos e telefones guardam **só dígitos** (as máscaras são só visuais).
 - `NUMERIC` é tratado como `number`. O driver `pg` devolve string, então converta no backend.
-- Para integrar, troque o corpo de cada ação em `store/db.tsx` e de cada função em `lib/queries.ts` por chamadas à API.
-  As telas não precisam mudar.
+- As mutações usam o contrato da API. Não adicionar fallback para mock ao tratar erro HTTP ou SQL pendente.
 
 ### Valores de domínio usados (colunas VARCHAR)
 

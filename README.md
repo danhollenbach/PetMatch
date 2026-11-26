@@ -248,42 +248,39 @@ Essa rota executa uma consulta real a cada chamada. Se o banco ficar indisponív
 após a inicialização, retorna HTTP 503 com `{"status":"error","database":"down"}`,
 sem expor credenciais ou detalhes internos do driver.
 
-### 3. Usar a conexão nos CRUDs
+### 3. Backend de negócio e frontend
 
-O `DatabaseModule` fornece e exporta um `DatabaseService` reutilizável. Para
-implementar um cadastro, importe `DatabaseModule` no módulo do resource e injete
-`DatabaseService` no repository. Registre o repository em `providers` e injete-o
-no service de negócio. O pool é compartilhado; não crie um novo `Pool` por resource.
+A API de domínio está em `backend/src/api`: validações, regras de negócio,
+repositório, transações, associações e foto. Os endpoints de exemplo gerados
+pelo Nest foram retirados do AppModule. O esquema existente foi preservado.
 
-Exemplo de repository para uma futura consulta de animais (ainda não implementado):
+**Todo SQL novo está vazio para implementação manual.** As rotas retornam 501
+`SQL_NOT_IMPLEMENTED` e a lista de queries necessárias, antes de iniciar qualquer
+alteração. A conexão saudável em `/health/database` não libera os cadastros por si só.
 
-```typescript
-import { Injectable } from '@nestjs/common';
-import { DatabaseService } from '../database/database.service.js';
+- [Guia de implementação SQL](docs/SQL_BACKEND.md): ordem de trabalho, transações,
+  bloqueio para concorrência, regras e futura estrutura binária.
+- [Catálogo de queries](docs/CATALOGO_QUERIES.md): parâmetros ordenados e retornos
+  das 64 consultas de domínio.
+- [Contrato da API](docs/API.md): rotas, corpos, erros e operações permitidas.
+- [TODO atualizado](TODO.md): código pronto e pendências de persistência/entrega.
 
-@Injectable()
-export class AnimalsRepository {
-  constructor(private readonly database: DatabaseService) {}
+Com PostgreSQL e Nest iniciados, em outro terminal:
 
-  async findById(id: number) {
-    const result = await this.database.query<{ id: number; nome: string }>(
-      'SELECT id, nome FROM animal WHERE id = $1',
-      [id],
-    );
-    return result.rows[0] ?? null;
-  }
-}
+```bash
+cd frontend
+npm ci
+npm run dev
 ```
 
-Passe valores separadamente em `$1`, `$2`, etc.; não concatene dados recebidos do
-usuário na string SQL. O método `query` executa uma consulta pelo pool. Operações
-com várias consultas em uma transação exigirão reservar o mesmo client para todo
-o fluxo; essa API de transações e os repositories dos CRUDs ainda estão pendentes.
+Abra `http://localhost:5173`. O Vite encaminha `/api` e `/health` ao Nest na
+porta 3000. Enquanto as queries de leitura não forem implementadas, a tela
+mostra “Banco aguardando consultas”, com botão de nova tentativa e detalhes.
+Não há fallback para dados fictícios nem gravações em memória.
 
-O caminho previsto é `Controller → Service → Repository → DatabaseService → PostgreSQL`.
-Os endpoints gerados dos cadastros ainda retornam exemplos; conectar o banco não
-implementa automaticamente os CRUDs. A aplicação não cria nem altera tabelas ao
-iniciar; o esquema continua sendo controlado pelos scripts SQL.
+A seleção de abrigo é uma sessão de demonstração sem autenticação. Use dados
+fictícios localmente. Após cada gravação confirmada, o frontend recarrega o
+snapshot da API; erro mantém o formulário e não exibe sucesso.
 
 ### 4. Verificar o backend
 
@@ -296,7 +293,7 @@ npm run lint
 npm run test:e2e
 ```
 
-Os testes unitários não precisam de PostgreSQL. Os testes e2e exigem o banco Docker
+Os testes de lógica, contratos HTTP e cliente frontend não precisam de PostgreSQL; os de HTTP abrem uma porta local temporária. Os testes e2e exigem o banco Docker
 iniciado e o `.env` configurado: verificam a rota HTTP de diagnóstico, consultas
 parametrizadas e acesso às 16 tabelas existentes, sem inserir ou remover dados.
 Não é necessário deixar outra instância da API aberta para executar esses testes.
