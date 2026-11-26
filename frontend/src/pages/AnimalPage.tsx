@@ -1,8 +1,9 @@
+import { AnimalPhoto } from "@/components/AnimalPhoto"
 import { Link, useNavigate, useParams } from "react-router-dom"
 import { ArrowLeft, Building2, Heart, HeartPulse, Pencil, PawPrint, ShieldCheck, Stethoscope, Syringe } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { AnimalArt, EmptyState, Info, StatusAnimalBadge } from "@/components/common"
+import { Confirm, attempt, EmptyState, Info, StatusAnimalBadge } from "@/components/common"
 import { AdoptionDialog } from "@/components/dialogs/AdoptionDialog"
 import { AnimalDialog } from "@/components/dialogs/AnimalDialog"
 import { VaccineDialog, VisitDialog } from "@/components/dialogs/ClinicalDialogs"
@@ -22,7 +23,7 @@ import { useSession } from "@/store/session"
 export function AnimalPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { db } = useDb()
+  const { db, actions } = useDb()
   const { cnpj } = useSession()
 
   const animal = db.animal.find((a) => a.id === Number(id))
@@ -57,7 +58,7 @@ export function AnimalPage() {
 
       <section className="grid gap-6 rounded-3xl bg-card p-4 ring-1 ring-foreground/5 sm:p-6 md:grid-cols-[minmax(0,380px)_1fr]">
         <div className="relative">
-          <AnimalArt especie={animal.especie} seed={animal.id} className="aspect-square w-full rounded-3xl" iconClassName="size-28" />
+          <AnimalPhoto key={animal.id} animal={animal} editable={membro} />
           <StatusAnimalBadge status={animal.status} className="absolute top-4 left-4 h-6 px-3 text-sm" />
         </div>
 
@@ -116,6 +117,9 @@ export function AnimalPage() {
                 Ações do abrigo {pendentes > 0 && `· ${pendentes} pedido(s) pendente(s)`}
               </p>
               <div className="flex flex-wrap gap-2">
+                <Confirm title="Excluir animal?" description="A exclusão só é permitida sem histórico clínico ou de adoção. O prontuário vazio e a foto também serão removidos."
+                  trigger={<Button variant="destructive">Excluir animal</Button>}
+                  onConfirm={async () => { const ok = await attempt(() => actions.removerAnimal(animal.id), "Animal excluído."); if (ok) navigate("/"); return ok }} />
                 <AnimalDialog cnpj={abrigo.cnpj} animal={animal} trigger={<Button variant="secondary"><Pencil /> Editar animal / prontuário</Button>} />
                 <VisitDialog animal={animal} prontuario={pront} trigger={<Button variant="secondary"><Stethoscope /> Novo atendimento</Button>} />
                 <VaccineDialog animal={animal} prontuario={pront} trigger={<Button variant="secondary"><Syringe /> Registrar vacina</Button>} />
