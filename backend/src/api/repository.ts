@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, ServiceUnavailableException } from '@nes
 import type { Database } from './model.js';
 import { fields, query, snapshotQueries, type Operation, type Query } from './domain.queries.js';
 import { QueryRunner, type Executor } from './query-runner.js';
-import { keys, schemas, tables, type Row, type Table } from './schema.js';
+import { keys, schemas, tables, validate, type Row, type Table } from './schema.js';
 
 function normalize<K extends Table>(table: K, input: Record<string, unknown>): Row<K> {
   const result: Record<string, unknown> = {};
@@ -15,7 +15,8 @@ function normalize<K extends Table>(table: K, input: Record<string, unknown>): R
     }
     result[name] = value;
   }
-  return result as unknown as Row<K>;
+  try { return validate(table, result); }
+  catch { throw new ServiceUnavailableException(`Tipos inválidos no retorno de ${table}.`); }
 }
 export class UnitOfWork {
   constructor(readonly db: Database, private readonly run: Executor) {}

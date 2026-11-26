@@ -1,4 +1,4 @@
-import { json, request } from "@/lib/api"
+import { json, request } from "../lib/api"
 import type { Abrigo, Adotante, Animal, Aplicacao, Atendimento, Doacao, Doador, EspecieAlvo, FeiraAdocao, Prontuario, Veterinario, Voluntario } from "@/types/db"
 
 type OptionalId<T> = Omit<T, "id"> & { id?: number }
