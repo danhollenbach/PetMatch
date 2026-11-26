@@ -1,5 +1,7 @@
 Atualizado em 26/11/2026.
 
+Revisão baseada no histórico até `2d6a39d` — checklist de queries pendentes.
+
 Situação atual: frontend remoto sincronizado; backend de negócio e integração HTTP implementados. **Todo SQL novo permanece vazio por decisão do projeto.** Cadastro, consultas e foto ainda não persistem até você preencher as queries. A API retorna 501 `SQL_NOT_IMPLEMENTED` com a lista exata das pendências.
 
 Implementação concluída nesta etapa (código, sem SQL):
@@ -11,27 +13,46 @@ Implementação concluída nesta etapa (código, sem SQL):
 - [x] Clínica, peso pela última medição, vacinação, doações, equipe e feiras com participantes válidos.
 - [x] API de foto JPEG/PNG até 5 MiB com validação de MIME/assinatura, leitura, substituição e exclusão.
 - [x] Frontend conectado à API, sem fallback para mock; formulários assíncronos, bloqueio de reenvio e mensagens de erro.
+- [x] Cancelar a carga inicial quando o componente é desmontado e ignorar respostas canceladas; manter estáveis as ações do contexto.
+- [x] Limpar a imagem anterior e o erro da foto após envio ou exclusão confirmados, antes de buscar a versão atualizada.
 - [x] Sessão de demonstração preservada e identificada como sem autenticação.
 - [x] Builds de backend/frontend; 93 testes automatizados e 4 e2e existentes com PostgreSQL real passaram em 26/11/2026.
 - [x] Navegador verificado: carga inicial mostra SQL pendente e seus identificadores, sem fingir banco vazio ou sucesso.
 - [x] Commits separados com até 200 linhas somadas (adições + remoções), padrão semântico e sufixo ` (🤖)`.
+- [x] Criar [pendent_queries.md](pendent_queries.md) com uma caixa de seleção para cada uma das 71 queries, descrições e ordem de implementação.
 
 Próximas ações de implementação manual:
 
-- [ ] Preencher começo, commit, rollback e lock em `transactionQueries`.
-- [ ] Preencher as 16 consultas `list` e liberar `GET /api/dados`.
-- [ ] Preencher as escritas dos cadastros e fluxos, começando por abrigo/coordenador e animal/prontuário.
+- [ ] Preencher as 4 consultas de começo, commit, rollback e lock em `transactionQueries`.
+- [ ] Preencher as 16 consultas `list`; junto das 4 transacionais, elas liberam `GET /api/dados` e a carga inicial do frontend.
+- [ ] Preencher as 48 entradas de escrita do catálogo (16 `insert`, 16 `update`, 16 `delete`), respeitando as operações permitidas pelos serviços; começar por abrigo/coordenador e animal/prontuário.
 - [ ] Alterar o esquema para foto binária e preencher `foto.get`, `foto.save`, `foto.delete`.
 - [ ] Implementar e integrar View, Procedure e Triggers, compatibilizando responsabilidades com o serviço.
 - [ ] Criar carga e validar persistência, rollback e concorrência reais; depois revisar modelos e PDF final.
 
-Guias: [contratos SQL e ordem de trabalho](docs/SQL_BACKEND.md), [64 consultas com parâmetros e retornos](docs/CATALOGO_QUERIES.md), [rotas e regras da API](docs/API.md). Os itens abaixo marcados como código concluído não significam que os critérios de persistência já foram demonstrados.
+Controle das queries: **0/71 implementadas**, sendo 4 transacionais, 64 de domínio e 3 de foto. O acompanhamento individual está em [pendent_queries.md](pendent_queries.md); este TODO mantém os marcos gerais. View, Procedure, Triggers, alteração de esquema e carga são pendências adicionais, fora dessa contagem.
+
+Guias: [checklist de queries](pendent_queries.md), [contratos SQL e ordem de trabalho](docs/SQL_BACKEND.md), [64 consultas com parâmetros e retornos](docs/CATALOGO_QUERIES.md), [rotas e regras da API](docs/API.md). Os itens abaixo marcados como código concluído não significam que os critérios de persistência já foram demonstrados.
 
 Entregas já registradas no Git:
 
 - [x] `3fa6bde` — `🔧 chore(docker): configurar PostgreSQL (🤖)`: Compose, volume persistente, inicialização do esquema, exemplo de ambiente e documentação do banco.
 - [x] `45d511c` — `✨ feat(nest): conectar PostgreSQL (🤖)`: configuração de ambiente, pool compartilhado, consultas parametrizadas, diagnóstico HTTP e testes.
 - [x] Acrescentar o sufixo ` (🤖)` aos dois commits feitos pelo assistente, preservando conteúdo e ordem.
+
+Entregas recentes de implementação e documentação:
+
+| Commits | Entrega |
+| --- | --- |
+| `e187c1e`, `ca0aeb2`, `d7a08ed` | Contratos SQL vazios, executor transacional, repositório e rotas do domínio/snapshot. |
+| `52abc4a`, `3f0f0d1`, `82297ad`, `5019c88`, `674ec8c` | Regras de negócio, associações e validação de entrada antes do banco. |
+| `d4b0860`, `13e36db` | API de fotos e integração da interface, incluindo exclusão protegida de animais. |
+| `643d6fa`, `b11f1cb`, `d54ea7f`, `4c1095d` | Formulários assíncronos, mutações HTTP e remoção da persistência simulada. |
+| `4ae5584`, `ec23238`, `c70d7dc`, `c68d922`, `5c39f91` | Testes de transação, domínio, contratos HTTP e cliente frontend. |
+| `e3abc57`, `61db393`, `3280ad9`, `a75f1a7` | Guia SQL, catálogo das consultas, contrato da API e READMEs atualizados. |
+| `ba3dc21` | Cancelamento da carga inicial e limpeza do estado da foto após alteração confirmada. |
+| `3dafd11`, `cfbdb21` | Separação no TODO entre código implementado e SQL/validação real pendentes. |
+| `2d6a39d` | Checklist individual das 71 queries em `pendent_queries.md`. |
 
 Base documental já disponível:
 
@@ -41,7 +62,7 @@ Base documental já disponível:
 - [x] Script SQL de criação no documento (páginas 3 a 5) e em `backend/database/schema.sql`.
 - [x] Definição de chaves automáticas com `SERIAL` no script; geração de ID validada em VACINA no PostgreSQL local em 24/11/2026.
 - [x] Declaração inicial do uso de IA para correções dos modelos e recriação/correção do SQL (página 5).
-- [x] Estrutura inicial dos 12 resources NestJS gerada e registrada no `AppModule`.
+- [x] Estrutura inicial dos 12 resources NestJS gerada; os módulos de exemplo foram posteriormente substituídos pelo `DomainModule` no `AppModule`.
 
 Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os resources gerados foram desativados no AppModule; a implementação ativa está em `backend/src/api`. O banco local e a conexão estão validados; a persistência de negócio depende das queries manuais.
 
@@ -65,7 +86,8 @@ Critério de conclusão: outra pessoa consegue criar o banco a partir do reposit
 
 2. Completar as regras de integridade
 
-O esquema já define relacionamentos e algumas restrições importantes. Por exemplo, PRONTUARIO.Id_animal é único, e as tabelas associativas têm chaves compostas. Ainda faltam decisões de negócio para orientar o CRUD.
+O esquema já define relacionamentos e algumas restrições importantes. Por exemplo, PRONTUARIO.Id_animal é único, e as tabelas associativas têm chaves compostas. As regras do backend estão definidas e testadas com executores simulados; falta completar sua proteção e validação no PostgreSQL.
+
 - [x] Definir os valores permitidos para status de animal e pedido de adoção.
 - [x] Definir os valores permitidos para espécie, sexo, tipo de doação e tipo de atendimento.
 - [x] Definir regras para capacidade, peso, valor de doação e número da dose.
@@ -74,7 +96,8 @@ O esquema já define relacionamentos e algumas restrições importantes. Por exe
 - [x] Definir quando um animal pode ser adotado e como impedir aprovações incompatíveis.
 - [x] Implementar no backend as regras do MER: aprovação adota, indisponibilidade bloqueia pedido e peso segue a última medição. Triggers e validação no banco continuam pendentes.
 - [ ] Alinhar a relação ANIMAL–PRONTUARIO entre MER, modelo relacional e implementação. O MER indica 1:1 obrigatório; o modelo relacional traz uma anotação de correção; `Id_animal NOT NULL UNIQUE` impede dois prontuários para o mesmo animal, mas sozinho não garante que todo animal tenha prontuário.
-- [ ] Aplicar as validações pertinentes no banco e no backend.
+- [x] Aplicar as validações de entrada e regras de negócio no backend.
+- [ ] Aplicar as restrições e regras pertinentes no banco, inclusive para comandos executados fora da API.
 As regras anotadas no MER fazem parte do modelo apresentado pelo grupo. As demais são recomendações para tornar o domínio consistente; o enunciado exige demonstrar integridade, mas não prescreve cada regra de negócio.
 
 Critério de conclusão: dados inválidos e operações incompatíveis são rejeitados de forma previsível, sem deixar registros inconsistentes.
@@ -90,7 +113,7 @@ Critério de conclusão: dados inválidos e operações incompatíveis são reje
 - [x] Documentar no README a inicialização do NestJS, verificação da conexão e uso do `DatabaseService` nos futuros repositories.
 - [x] Implementar DomainRepository/UnitOfWork usando DatabaseService, com contratos de consulta. As strings SQL continuam pendentes.
 - [ ] Usar parâmetros em todas as consultas dos CRUDs quando forem implementadas.
-- [x] Gerar módulos, controllers, services, DTOs e classes de entidade para os 12 resources e registrar seus módulos no `AppModule`.
+- [x] Gerar a estrutura inicial dos 12 resources; manter somente a implementação ativa de domínio registrada no `AppModule`, sem expor endpoints de exemplo.
 - [x] Criar tipos e validação em `api/model.ts` e `api/schema.ts`, endpoints de negócio e associações; desativar rotas de exemplo. SQL ainda vazio.
 - [x] Preservar CPF, CNPJ e Documento como strings nas novas rotas de domínio, sem conversão numérica.
 - [x] Validar campos obrigatórios, identificadores e dados recebidos.
@@ -104,12 +127,12 @@ Critério de conclusão: as operações da API gravam e consultam dados reais, c
 
 O enunciado pede CRUD para o sistema, mas não determina uma tela independente para cada tabela. O código das operações abaixo está implementado no novo módulo; as consultas e a demonstração com persistência continuam pendentes:
 
-| Área | Resource existente | Tabelas envolvidas | Funcionalidades implementadas em código, aguardando SQL |
+| Área | Resource original (inativo) | Tabelas envolvidas | Funcionalidades implementadas em código, aguardando SQL |
 | --- | --- | --- | --- |
 | Abrigos | `shelter` | ABRIGO | Cadastrar, listar, detalhar, editar e excluir conforme dependências |
 | Animais | `animals` | ANIMAL | CRUD com seleção do abrigo e manutenção dos dados do animal |
 | Adotantes | `adoptant` | ADOTANTE | CRUD dos interessados em adoção |
-| Pedidos de adoção | `adoption` | PEDIDO_ADOCAO | Criar, consultar, decidir e tratar correções/exclusões conforme regra |
+| Pedidos de adoção | `adoption` | PEDIDO_ADOCAO | Criar, consultar e decidir; decisões finais imutáveis, sem edição ou exclusão genérica |
 | Doadores e doações | `donor`, `donation` | DOADOR, DOACAO | CRUD de doadores e registro de doações vinculadas ao abrigo, inclusive anônimas conforme o modelo |
 | Voluntários | `volunteer` | VOLUNTARIO, ATUA | CRUD de voluntários e gestão dos vínculos com abrigos |
 | Veterinários | `veterinarian` | VETERINARIO, VINCULO | CRUD de veterinários e gestão dos vínculos com abrigos |
@@ -134,8 +157,9 @@ A aprovação de adoção foi implementada e testada com executor simulado; as g
 - [x] Atualizar o status e a data de decisão do pedido.
 - [x] Atualizar o status do animal para adotado.
 - [x] Definir o destino dos outros pedidos pendentes para o mesmo animal.
-- [ ] Executar as alterações de forma atômica.
-- [ ] Impedir que duas aprovações concorrentes produzam adoções conflitantes.
+- [x] Coordenar as alterações no mesmo cliente/transação, com preflight e contrato de lock comum.
+- [ ] Implementar o SQL transacional e demonstrar atomicidade das alterações no PostgreSQL.
+- [ ] Implementar o bloqueio SQL e testar duas aprovações concorrentes, comprovando uma única adoção aprovada.
 - [x] Disponibilizar a ação na interface.
 - [ ] Demonstrar que uma falha não deixa apenas parte das alterações gravada.
 Critério de conclusão: uma ação do usuário modifica corretamente PEDIDO_ADOCAO e ANIMAL, mantendo as relações válidas.
@@ -164,18 +188,20 @@ Critério de conclusão: os três recursos existem no banco e seu uso pode ser d
 
 7. Armazenar um dado binário no banco
 
-A opção mais natural é uma foto do animal.
+A foto do animal foi escolhida; API e componente visual estão implementados. O esquema binário e as três queries de foto permanecem pendentes.
+
 - [ ] Acrescentar armazenamento binário ao modelo, em campo ou tabela relacionada.
 - [ ] Guardar os metadados necessários, como tipo do arquivo e nome.
 - [x] Implementar envio do arquivo pelo backend.
 - [x] Validar tipo e tamanho.
 - [ ] Gravar os bytes no banco.
-- [x] Implementar recuperação do arquivo.
-- [x] Exibir a foto na interface.
+- [x] Implementar a rota de recuperação do arquivo, aguardando `foto.get`.
+- [x] Implementar a exibição da foto na interface, com ilustração quando ausente e mensagem em caso de erro.
 - [ ] Incluir pelo menos um arquivo real na demonstração.
 Critério de conclusão: a imagem continua recuperável a partir do banco após reiniciar a aplicação. Guardar somente uma URL ou caminho não atende ao requisito de dado binário no banco.
 
 8. Construir a interface gráfica
+
 - [x] Substituir a tela padrão do Vite pela aplicação PetMatch.
 - [x] Criar navegação entre as áreas implementadas.
 - [x] Criar listagens, formulários de cadastro, edição e visualização.
@@ -183,14 +209,19 @@ Critério de conclusão: a imagem continua recuperável a partir do banco após 
 - [x] Usar seletores para relacionamentos, evitando exigir IDs digitados pelo usuário.
 - [x] Mostrar mensagens de sucesso e erros compreensíveis.
 - [x] Tratar carregamento e listas vazias.
-- [ ] Integrar a aprovação de adoção, a consulta à View e o envio da foto.
+- [x] Integrar as ações de aprovação de adoção e envio/substituição/exclusão da foto aos endpoints da API.
+- [x] Tratar SQL pendente, falha de rede e falha de recarga após gravação confirmada, sem simular sucesso ou incentivar inclusão duplicada.
+- [ ] Integrar a consulta à View após sua implementação.
+- [ ] Demonstrar adoção e fotos com persistência real após preencher as queries.
 Critério de conclusão: uma pessoa leiga consegue operar o CRUD sem terminal, comandos SQL ou chamadas manuais à API.
 
 9. Popular o banco e verificar os fluxos
 
 - [x] Validar o build do backend e executar 35 testes unitários em 25/11/2026.
+- [x] Ampliar a suíte para 93 testes de lógica, contratos HTTP e cliente frontend; última execução registrada em 26/11/2026, com todos aprovados.
 - [x] Executar 4 testes e2e com PostgreSQL real: rota inicial, diagnóstico HTTP, parâmetros SQL e acesso às 16 tabelas.
-- [x] Executar o lint sem erros; os avisos restantes são de parâmetros não usados nos services gerados.
+- [x] Compilar backend e frontend e executar lint sem erros; permanecem avisos nos services gerados inativos e de Fast Refresh no frontend. O build do frontend também avisa sobre tamanho do bundle.
+- [x] Conferir no navegador a tela de SQL pendente e a lista de identificadores das consultas faltantes, inclusive após o ajuste do carregamento inicial.
 - [x] Verificar a inicialização e o encerramento da API compilada com conexão real, sem manter o processo de teste ativo.
 - [ ] Criar um script de população com dados fictícios coerentes.
 - [ ] Garantir pelo menos 10 registros nas tabelas principais.
@@ -199,7 +230,8 @@ Critério de conclusão: uma pessoa leiga consegue operar o CRUD sem terminal, c
 - [ ] Incluir animais e pedidos em situações diferentes.
 - [ ] Incluir prontuários, atendimentos, vacinas, aplicações, doações e participações.
 - [ ] Verificar cadastro, consulta, edição e exclusão pelo frontend.
-- [ ] Verificar rejeição de duplicidades e referências inexistentes.
+- [x] Testar regras de duplicidade, capacidade, adoção, clínica, associações e foto com executores simulados.
+- [ ] Verificar rejeição de duplicidades e referências inexistentes com as consultas implementadas no PostgreSQL real.
 - [ ] Verificar rollback da operação sobre várias tabelas.
 - [ ] Verificar View, Procedure, Trigger e recuperação do binário.
 - [ ] Ensaiar a inicialização completa em um ambiente limpo.
@@ -229,7 +261,9 @@ Reaproveitar o documento existente como base da entrega final. Introdução, mod
 - [ ] Exportar um único PDF final com introdução, MER, modelo relacional, diagrama de mapeamento/persistência e declaração de IA atualizada.
 - [ ] Verificar a legibilidade dos diagramas no PDF final, especialmente o MER atualmente comprimido junto à introdução na página 1.
 - [x] Documentar no README a instalação das dependências, configuração do ambiente, criação do banco, execução do NestJS, diagnóstico da conexão e comandos de teste.
-- [ ] Complementar o README com os scripts de população e o roteiro de uso dos CRUDs quando estiverem implementados.
+- [x] Atualizar os READMEs com execução integrada, sessão de demonstração, erros de SQL pendente e links para os contratos da API.
+- [x] Documentar finalidade, parâmetros e retornos das queries e criar o checklist individual em `pendent_queries.md`.
+- [ ] Complementar o README com os scripts de população e um roteiro de demonstração dos CRUDs com persistência real.
 - [ ] Confirmar SQL e código final disponíveis no GitHub.
 - [x] Versionar o documento em `docs/` e o TODO; ambos constam no commit `6065f6e`. As atualizações de Docker e conexão foram incluídas nos dois commits registrados acima.
 - [ ] Confirmar a aprovação do tema e organizar a apresentação com todos os integrantes.
