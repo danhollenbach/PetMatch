@@ -1,3 +1,4 @@
+import { AsyncForm } from "@/components/AsyncForm"
 import { useMemo, useState, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import { Cat, Dog } from "lucide-react"
@@ -62,7 +63,7 @@ function AnimalFormBody({ cnpj, animal, close }: { cnpj: string; animal?: Animal
     [db.animal, a.especie]
   )
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     const peso = p.peso ? Number(p.peso.replace(",", ".")) : null
     if (peso != null && !(peso > 0 && peso < 1000)) return invalid("Informe um peso válido (kg).")
@@ -73,7 +74,7 @@ function AnimalFormBody({ cnpj, animal, close }: { cnpj: string; animal?: Animal
       peso,
     }
     let id = animal?.id
-    const ok = attempt(
+    const ok = await attempt(
       () => {
         id = actions.salvarAnimal({ ...a, id: animal?.id, nome: a.nome.trim(), raca: a.raca.trim() }, prontuario)
       },
@@ -88,7 +89,7 @@ function AnimalFormBody({ cnpj, animal, close }: { cnpj: string; animal?: Animal
   const statusOptions = (Object.keys(statusAnimalLabel) as StatusAnimal[]).map((s) => ({ value: s, label: statusAnimalLabel[s] }))
 
   return (
-    <form onSubmit={submit} className="grid gap-5">
+    <AsyncForm onSubmit={submit} className="grid gap-5">
       {!animal && (
         <div className="flex items-center justify-between rounded-2xl bg-muted/60 px-4 py-3 text-sm">
           <span className="text-muted-foreground">Ocupação do abrigo</span>
@@ -168,6 +169,6 @@ function AnimalFormBody({ cnpj, animal, close }: { cnpj: string; animal?: Animal
         </Button>
         <Button type="submit">{animal ? "Salvar alterações" : "Cadastrar animal"}</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }

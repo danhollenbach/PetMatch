@@ -1,3 +1,4 @@
+import { AsyncForm } from "@/components/AsyncForm"
 import { useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Stethoscope } from "lucide-react"
@@ -45,12 +46,12 @@ function VisitForm({ animal, prontuario, close }: Omit<Props, "trigger"> & { clo
       </EmptyState>
     )
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (!cpfVet) return invalid("Selecione o veterinário responsável.")
     const p = peso ? Number(peso.replace(",", ".")) : null
     if (p != null && !(p > 0 && p < 1000)) return invalid("Informe um peso válido (kg).")
-    const ok = attempt(
+    const ok = await attempt(
       () =>
         actions.registrarAtendimento({
           cpf_veterinario: cpfVet,
@@ -67,7 +68,7 @@ function VisitForm({ animal, prontuario, close }: Omit<Props, "trigger"> & { clo
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+    <AsyncForm onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
       <Field label="Veterinário(a)" className="sm:col-span-2">
         <SelectField
           value={cpfVet}
@@ -101,7 +102,7 @@ function VisitForm({ animal, prontuario, close }: Omit<Props, "trigger"> & { clo
         </Button>
         <Button type="submit">Registrar</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }
 
@@ -137,11 +138,11 @@ function VaccineForm({ animal, prontuario, close }: Omit<Props, "trigger"> & { c
     setDose(Math.max(0, ...doses) + 1)
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (modo === "existente" && !idVacina) return invalid("Selecione a vacina.")
     if (dose < 1) return invalid("A dose deve ser 1 ou maior.")
-    const ok = attempt(
+    const ok = await attempt(
       () =>
         actions.registrarAplicacao(
           {
@@ -159,7 +160,7 @@ function VaccineForm({ animal, prontuario, close }: Omit<Props, "trigger"> & { c
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <AsyncForm onSubmit={submit} className="grid gap-4">
       <Segmented
         value={modo}
         onChange={(m) => {
@@ -211,6 +212,6 @@ function VaccineForm({ animal, prontuario, close }: Omit<Props, "trigger"> & { c
         </Button>
         <Button type="submit">Registrar aplicação</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }
