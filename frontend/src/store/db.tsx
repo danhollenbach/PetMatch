@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react"
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { createApiActions } from "./actions"
 import { ApiError, request } from "@/lib/api"
 import type { Database } from "@/types/db"
@@ -24,8 +24,17 @@ export function DbProvider({ children }: { children: ReactNode }) {
       setError(saved ? new Error(`Operação salva. Não foi possível atualizar a tela: ${failure.message} Recarregue os dados antes de continuar.`) : failure)
     } finally { if (generation.current === current) setLoading(false) }
   }, [])
-  useEffect(() => { void reload(); return () => { generation.current++ } }, [reload])
-  const actions = createApiActions(() => reload(true))
+  useEffect(() => {
+    const controller = new AbortController()
+    void request<Database>("/dados", { signal: controller.signal })
+      .then(data => { if (!controller.signal.aborted) { setDb(data); setError(null) } })
+      .catch(cause => { if (!controller.signal.aborted) setError(cause instanceof Error ? cause : new Error("Falha ao carregar dados.")) })
+      .finally(() => { if (!controller.signal.aborted) setLoading(false) })
+    return () => controller.abort()
+  }, [])
+  // A fábrica só cria callbacks: reload acessa a ref quando ocorre um evento.
+  // oxlint-disable-next-line react/refs
+  const actions = useMemo(() => createApiActions(() => reload(true)), [reload])
   if (loading) return <main className="grid min-h-screen place-content-center p-8" role="status">Carregando PetMatch…</main>
   if (error || !db) return <main className="mx-auto grid min-h-screen max-w-xl content-center gap-4 p-8">
     <h1 className="text-2xl font-semibold">{error instanceof ApiError && error.code === "SQL_NOT_IMPLEMENTED" ? "Banco aguardando consultas" : "Dados indisponíveis"}</h1>

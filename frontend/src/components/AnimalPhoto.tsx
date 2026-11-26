@@ -14,7 +14,6 @@ export function AnimalPhoto({ animal, editable }: { animal: Animal; editable: bo
   useEffect(() => {
     const abort = new AbortController()
     let objectUrl: string | undefined
-    setUrl(null); setError("")
     async function load() {
       const response = await fetch(`/api/animais/${animal.id}/foto`, { signal: abort.signal })
       if (response.status === 404) return
@@ -37,7 +36,7 @@ export function AnimalPhoto({ animal, editable }: { animal: Animal; editable: bo
       await request(`/animais/${animal.id}/foto`, { method: file ? "PUT" : "DELETE", ...(file ? { body } : {}) })
     }, file ? "Foto salva." : "Foto removida.")
     lock.current = false; setPending(false)
-    if (ok) setVersion(value => value + 1)
+    if (ok) { setUrl(null); setError(""); setVersion(value => value + 1) }
     if (input.current) input.current.value = ""
   }
   return <div className="grid gap-3">
