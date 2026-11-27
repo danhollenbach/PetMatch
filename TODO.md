@@ -64,7 +64,7 @@ Base documental já disponível:
 - [x] Declaração inicial do uso de IA para correções dos modelos e recriação/correção do SQL (página 5).
 - [x] Estrutura inicial dos 12 resources NestJS gerada; os módulos de exemplo foram posteriormente substituídos pelo `DomainModule` no `AppModule`.
 
-Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os resources gerados foram desativados no AppModule; a implementação ativa está em `backend/src/api`. O banco local e a conexão estão validados; a persistência de negócio depende das queries manuais.
+Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os resources têm DTOs/classes de entidade vazios e services com respostas de exemplo; o CRUD com persistência permanece pendente. O banco local foi iniciado em 24/11/2026 e a conexão do NestJS foi validada em 25/11/2026, incluindo a rota HTTP de diagnóstico. Os fluxos de negócio ainda precisam ser implementados e testados. Em 26/11/2026 o `schema.sql` recebeu as regras de integridade (seção 2), testadas em um PostgreSQL 17 limpo.
 
 1. Preparar um banco reproduzível
 
@@ -72,7 +72,7 @@ Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os res
 - [x] Preparar `compose.yaml` com volume persistente, healthcheck, acesso em localhost e execução inicial de `backend/database/schema.sql`.
 - [x] Configurar uma instância local para desenvolvimento e apresentação; serviço `postgres` saudável em `127.0.0.1:5433` no OrbStack. Porta publicada ajustada em 25/11/2026 para evitar conflito com o PostgreSQL nativo na porta 5432, preservando o volume de dados.
 - [x] Executar o schema.sql em um banco vazio; inicialização automática concluída no PostgreSQL 17.12.
-- [x] Confirmar a criação das 16 tabelas, 16 PKs, 17 FKs e 4 restrições UNIQUE consultando os catálogos do banco.
+- [x] Confirmar a criação das 16 tabelas, 16 PKs, 17 FKs e 4 restrições UNIQUE consultando os catálogos do banco. Desde 26/11/2026 são 3 UNIQUE de coluna; o e-mail do adotante passou para o índice único `ux_adotante_email`.
 - [x] Inserir registro em VACINA sem informar o ID e verificar a geração automática; inserção revertida por rollback, sem deixar registros de teste.
 - [x] Recriar o container preservando o volume e confirmar a permanência das 16 tabelas e do estado da sequência de IDs.
 - [x] Documentar no README como configurar, iniciar, acessar e parar o banco, incluindo persistência e limitações da inicialização automática.
@@ -80,24 +80,23 @@ Ainda precisam de revisão os diagramas e sua correspondência com o SQL. Os res
 - [x] Versionar a base de reconstrução do banco: `compose.yaml`, `.env.example` e `backend/database/schema.sql`, com instruções no README.
 - [ ] Acrescentar e versionar os futuros scripts de população, alterações de esquema, View, Procedure e Triggers conforme forem implementados.
 
-Validação local: `docker compose config --quiet`, inicialização com `docker compose up -d --wait`, conexão TCP autenticada dentro do container, consultas aos catálogos, inserção com rollback e recriação do container com volume preservado. O `.env` local foi criado com senha gerada e está ignorado pelo Git. A carga de demonstração e os testes das regras de integridade continuam pendentes.
+Validação local: `docker compose config --quiet`, inicialização com `docker compose up -d --wait`, conexão TCP autenticada dentro do container, consultas aos catálogos, inserção com rollback e recriação do container com volume preservado. O `.env` local foi criado com senha gerada e está ignorado pelo Git. A carga de demonstração continua pendente. As regras de integridade adicionadas em 26/11/2026 foram testadas em um container descartável; quem já tinha o volume criado precisa recriá-lo (`docker compose down -v`, apagando os dados locais) ou aplicar as mudanças com `ALTER TABLE`.
 
 Critério de conclusão: outra pessoa consegue criar o banco a partir do repositório seguindo instruções explícitas.
 
 2. Completar as regras de integridade
 
-O esquema já define relacionamentos e algumas restrições importantes. Por exemplo, PRONTUARIO.Id_animal é único, e as tabelas associativas têm chaves compostas. As regras do backend estão definidas e testadas com executores simulados; falta completar sua proteção e validação no PostgreSQL.
-
-- [x] Definir os valores permitidos para status de animal e pedido de adoção.
-- [x] Definir os valores permitidos para espécie, sexo, tipo de doação e tipo de atendimento.
-- [x] Definir regras para capacidade, peso, valor de doação e número da dose.
-- [x] Definir coerência entre data do pedido e data da decisão.
-- [x] Definir como tratar exclusão de registros referenciados: bloquear, remover vínculos ou outra regra justificada.
-- [x] Definir quando um animal pode ser adotado e como impedir aprovações incompatíveis.
-- [x] Implementar no backend as regras do MER: aprovação adota, indisponibilidade bloqueia pedido e peso segue a última medição. Triggers e validação no banco continuam pendentes.
-- [ ] Alinhar a relação ANIMAL–PRONTUARIO entre MER, modelo relacional e implementação. O MER indica 1:1 obrigatório; o modelo relacional traz uma anotação de correção; `Id_animal NOT NULL UNIQUE` impede dois prontuários para o mesmo animal, mas sozinho não garante que todo animal tenha prontuário.
-- [x] Aplicar as validações de entrada e regras de negócio no backend.
-- [ ] Aplicar as restrições e regras pertinentes no banco, inclusive para comandos executados fora da API.
+- [x] Definir os valores permitidos para status de animal e pedido de adoção: CHECKs `ck_animal_status` e `ck_pedido_status`, iguais a `frontend/src/types/db.ts`.
+- [x] Definir os valores permitidos para espécie, sexo, tipo de doação e tipo de atendimento: CHECKs em ANIMAL, VACINA, DOACAO e ATENDIMENTO. CPF, CNPJ, CEP e UF também têm formato validado.
+- [x] Definir regras para capacidade, peso, valor de doação e número da dose: capacidade ≥ 1, peso > 0, dose ≥ 1; doação em dinheiro exige valor > 0 e doação de insumo exige descrição e valor nulo.
+- [x] Definir coerência entre data do pedido e data da decisão: pendente sem decisão, aprovado/reprovado com decisão, decisão ≥ pedido. O trigger `trg_pedido_data_decisao` preenche a data atual quando ela não é informada.
+- [x] Definir como tratar exclusão de registros referenciados: `ON DELETE` nas 17 FKs. Animal apaga prontuário, atendimentos, aplicações e pedidos; abrigo com animais ou doações é bloqueado; doador excluído torna a doação anônima; associações somem com a pessoa; veterinário com atendimentos, adotante com pedidos e vacina aplicada são bloqueados.
+- [ ] Definir quando um animal pode ser adotado e como impedir aprovações incompatíveis. Parcial: os índices únicos parciais garantem no máximo um pedido aprovado por animal (inclusive com aprovações simultâneas) e um pedido pendente por adotante e animal. Falta a regra de disponibilidade, ligada à seção 6.
+- [ ] Implementar as regras já anotadas no MER: aprovação de pedido marca o animal como adotado; pedido para animal indisponível é bloqueado; peso informado no atendimento atualiza o prontuário.
+- [x] Implementar a relação ANIMAL–PRONTUARIO 1:1 obrigatória: `trg_animal_cria_prontuario` cria o prontuário ao inserir o animal e `trg_prontuario_bloqueia_exclusao` impede excluir o prontuário sem o animal. Seed e backend não devem inserir prontuário, apenas atualizá-lo. Ainda falta alinhar o MER e o modelo relacional (seção 10).
+- [ ] Aplicar as validações pertinentes no banco e no backend. Banco concluído; falta o backend (DTOs, erros `23505`/`23503`/`23514` traduzidos para HTTP, buscas por e-mail com `lower()`).
+- [x] Indexar as FKs não cobertas por PK ou UNIQUE: 12 índices `ix_*`.
+- [x] Definir valores padrão: animal começa `disponivel`, pedido começa `pendente` com a data atual, prontuário abre na data atual.
 As regras anotadas no MER fazem parte do modelo apresentado pelo grupo. As demais são recomendações para tornar o domínio consistente; o enunciado exige demonstrar integridade, mas não prescreve cada regra de negócio.
 
 Critério de conclusão: dados inválidos e operações incompatíveis são rejeitados de forma previsível, sem deixar registros inconsistentes.
@@ -216,14 +215,7 @@ Critério de conclusão: a imagem continua recuperável a partir do banco após 
 Critério de conclusão: uma pessoa leiga consegue operar o CRUD sem terminal, comandos SQL ou chamadas manuais à API.
 
 9. Popular o banco e verificar os fluxos
-
-- [x] Validar o build do backend e executar 35 testes unitários em 25/11/2026.
-- [x] Ampliar a suíte para 93 testes de lógica, contratos HTTP e cliente frontend; última execução registrada em 26/11/2026, com todos aprovados.
-- [x] Executar 4 testes e2e com PostgreSQL real: rota inicial, diagnóstico HTTP, parâmetros SQL e acesso às 16 tabelas.
-- [x] Compilar backend e frontend e executar lint sem erros; permanecem avisos nos services gerados inativos e de Fast Refresh no frontend. O build do frontend também avisa sobre tamanho do bundle.
-- [x] Conferir no navegador a tela de SQL pendente e a lista de identificadores das consultas faltantes, inclusive após o ajuste do carregamento inicial.
-- [x] Verificar a inicialização e o encerramento da API compilada com conexão real, sem manter o processo de teste ativo.
-- [ ] Criar um script de população com dados fictícios coerentes.
+- [ ] Criar um script de população com dados fictícios coerentes, respeitando os CHECKs, a ordem das FKs e o prontuário criado por trigger. Se IDs forem informados manualmente, ajustar as sequências com `setval`.
 - [ ] Garantir pelo menos 10 registros nas tabelas principais.
 - [ ] Justificar quantidades menores quando a natureza dos dados exigir.
 - [ ] Popular as associações com exemplos suficientes para demonstrar os relacionamentos.
@@ -251,7 +243,7 @@ Reaproveitar o documento existente como base da entrega final. Introdução, mod
 - [ ] Revisar os tipos no modelo relacional: CPF, CNPJ e Documento aparecem como INT, enquanto o SQL usa CHAR/VARCHAR; Valor e Peso aparecem como FLOAT, enquanto o SQL usa NUMERIC; campos como Observacoes, Diagnostico e Tratamento também precisam ser alinhados aos tipos SQL.
 - [ ] Corrigir as cardinalidades e a anotação de revisão da relação ANIMAL–PRONTUARIO, de acordo com a regra efetivamente implementada.
 - [ ] Conferir PKs, FKs, unicidade, nulabilidade e correspondência entre MER, modelo relacional e script final.
-- [ ] Atualizar os diagramas após alterações feitas para o binário ou outros requisitos.
+- [ ] Atualizar os diagramas após alterações feitas para o binário ou outros requisitos, incluindo as regras de 26/11/2026: prontuário 1:1 obrigatório, regras de exclusão e e-mail único sem diferenciar maiúsculas.
 - [ ] Criar o diagrama da persistência usando uma tabela concreta, como ANIMAL.
 - [ ] Mostrar nesse diagrama o caminho: tela → API/controller → serviço → acesso a dados → tabela.
 - [ ] Complementar a declaração de IA com usos posteriores efetivamente realizados, incluindo apoio ao planejamento e à implementação, quando aplicável, indicando onde e com qual objetivo.
