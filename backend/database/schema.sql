@@ -77,7 +77,7 @@ CREATE TABLE ANIMAL (
     Nome            VARCHAR(60) NOT NULL,
     Data_nascimento DATE,
     Raca            VARCHAR(60) NOT NULL,
-    Status          VARCHAR(15) NOT NULL,
+    Status          VARCHAR(15) NOT NULL DEFAULT 'disponivel',
     Castrado        BOOLEAN     NOT NULL,
     Especie         VARCHAR(10) NOT NULL,
     CONSTRAINT ck_animal_sexo    CHECK (Sexo IN ('M', 'F')),
@@ -88,7 +88,7 @@ CREATE TABLE ANIMAL (
 CREATE TABLE PRONTUARIO (
     Id            SERIAL       PRIMARY KEY,
     Id_animal     INT          NOT NULL UNIQUE REFERENCES ANIMAL (Id) ON DELETE CASCADE,
-    Data_abertura DATE         NOT NULL,
+    Data_abertura DATE         NOT NULL DEFAULT CURRENT_DATE,
     Alergias      VARCHAR(200),
     Observacoes   TEXT,
     Peso          NUMERIC(5,2),
@@ -112,8 +112,8 @@ CREATE TABLE PEDIDO_ADOCAO (
     Id           SERIAL      PRIMARY KEY,
     Id_animal    INT         NOT NULL REFERENCES ANIMAL (Id) ON DELETE CASCADE,
     CPF_adotante CHAR(11)    NOT NULL REFERENCES ADOTANTE (CPF) ON DELETE RESTRICT,
-    Status       VARCHAR(10) NOT NULL,
-    Data_pedido  DATE        NOT NULL,
+    Status       VARCHAR(10) NOT NULL DEFAULT 'pendente',
+    Data_pedido  DATE        NOT NULL DEFAULT CURRENT_DATE,
     Data_decisao DATE,
     CONSTRAINT ck_pedido_status CHECK (Status IN ('pendente', 'aprovado', 'reprovado')),
     -- Pendente não tem decisão; aprovado/reprovado exigem data de decisão
@@ -191,8 +191,8 @@ CREATE INDEX ix_participa_id_feira        ON PARTICIPA (Id_feira_adocao);
 CREATE FUNCTION fn_animal_cria_prontuario() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
-    INSERT INTO PRONTUARIO (Id_animal, Data_abertura)
-    VALUES (NEW.Id, CURRENT_DATE);
+    -- Data_abertura assume o DEFAULT (data atual)
+    INSERT INTO PRONTUARIO (Id_animal) VALUES (NEW.Id);
     RETURN NEW;
 END;
 $$;
@@ -217,3 +217,22 @@ $$;
 CREATE TRIGGER trg_prontuario_bloqueia_exclusao
 BEFORE DELETE ON PRONTUARIO
 FOR EACH ROW EXECUTE FUNCTION fn_prontuario_bloqueia_exclusao();
+
+-- =====================================================================
+-- PEDIDO_ADOCAO: data de decisão automática
+-- Ao aprovar ou reprovar um pedido sem informar a data, usa a data atual.
+-- =====================================================================
+
+CREATE FUNCTION fn_pedido_data_decisao() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.Status <> 'pendente' AND NEW.Data_decisao IS NULL THEN
+        NEW.Data_decisao := CURRENT_DATE;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_pedido_data_decisao
+BEFORE INSERT OR UPDATE OF Status ON PEDIDO_ADOCAO
+FOR EACH ROW EXECUTE FUNCTION fn_pedido_data_decisao();
