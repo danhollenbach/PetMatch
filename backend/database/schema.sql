@@ -160,3 +160,39 @@ CREATE TABLE PARTICIPA (
     Id_feira_adocao INT      NOT NULL REFERENCES FEIRA_ADOCAO (Id) ON DELETE CASCADE,
     PRIMARY KEY (CPF_voluntario, Id_feira_adocao)
 );
+
+-- =====================================================================
+-- ANIMAL 1:1 PRONTUARIO (obrigatório)
+-- Todo animal nasce com um prontuário, e o prontuário só pode ser
+-- removido junto com o animal (pelo ON DELETE CASCADE).
+-- =====================================================================
+
+CREATE FUNCTION fn_animal_cria_prontuario() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    INSERT INTO PRONTUARIO (Id_animal, Data_abertura)
+    VALUES (NEW.Id, CURRENT_DATE);
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_animal_cria_prontuario
+AFTER INSERT ON ANIMAL
+FOR EACH ROW EXECUTE FUNCTION fn_animal_cria_prontuario();
+
+CREATE FUNCTION fn_prontuario_bloqueia_exclusao() RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+    -- Na exclusão em cascata o animal já foi removido; fora dela, bloqueia.
+    IF EXISTS (SELECT 1 FROM ANIMAL WHERE Id = OLD.Id_animal) THEN
+        RAISE EXCEPTION 'O prontuário % só pode ser excluído junto com o animal %.',
+            OLD.Id, OLD.Id_animal
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN OLD;
+END;
+$$;
+
+CREATE TRIGGER trg_prontuario_bloqueia_exclusao
+BEFORE DELETE ON PRONTUARIO
+FOR EACH ROW EXECUTE FUNCTION fn_prontuario_bloqueia_exclusao();
