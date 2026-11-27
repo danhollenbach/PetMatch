@@ -24,7 +24,7 @@ export function AppLayout() {
         <Outlet />
       </main>
       <footer className="mx-auto w-full max-w-7xl px-4 pb-8 text-center text-xs text-muted-foreground sm:px-6">
-        PetMatch · protótipo de interface com dados fictícios mantidos apenas em memória.
+        PetMatch · conectado à API. A seleção de abrigo é uma sessão de demonstração, sem autenticação.
       </footer>
     </div>
   )

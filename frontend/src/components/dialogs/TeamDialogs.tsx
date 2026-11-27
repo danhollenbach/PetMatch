@@ -1,3 +1,4 @@
+import { AsyncForm } from "@/components/AsyncForm"
 import { useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -43,13 +44,13 @@ function VolunteerForm({ cnpj, voluntario, close }: { cnpj: string; voluntario?:
     setV(existente ? { ...existente, email: existente.email ?? "", telefone: existente.telefone ?? "" } : { ...v, cpf })
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (v.cpf.length !== 11) return invalid("Informe um CPF com 11 dígitos.")
     if (!voluntario && db.atua.some((a) => a.cnpj_abrigo === cnpj && a.cpf_voluntario === v.cpf))
       return invalid("Este voluntário já faz parte da equipe. Edite-o pela lista.")
     if (!funcao.trim()) return invalid("Informe a função.")
-    const ok = attempt(
+    const ok = await attempt(
       () =>
         actions.salvarVoluntario(
           cnpj,
@@ -62,7 +63,7 @@ function VolunteerForm({ cnpj, voluntario, close }: { cnpj: string; voluntario?:
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+    <AsyncForm onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
       <Field label="CPF" hint={aviso}>
         <MaskedInput kind="cpf" required disabled={!!voluntario} value={v.cpf} onChange={onCpf} placeholder="000.000.000-00" />
       </Field>
@@ -89,7 +90,7 @@ function VolunteerForm({ cnpj, voluntario, close }: { cnpj: string; voluntario?:
         </Button>
         <Button type="submit">{voluntario ? "Salvar" : "Adicionar"}</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }
 
@@ -123,12 +124,12 @@ function VetForm({ cnpj, vet, close }: { cnpj: string; vet?: Veterinario; close:
     setV(existente ? { ...existente, email: existente.email ?? "", telefone: existente.telefone ?? "" } : { ...v, cpf })
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (v.cpf.length !== 11) return invalid("Informe um CPF com 11 dígitos.")
     if (!vet && db.vinculo.some((x) => x.cnpj_abrigo === cnpj && x.cpf_veterinario === v.cpf))
       return invalid("Este veterinário já está vinculado ao abrigo.")
-    const ok = attempt(
+    const ok = await attempt(
       () =>
         actions.salvarVeterinario(cnpj, {
           ...v,
@@ -143,7 +144,7 @@ function VetForm({ cnpj, vet, close }: { cnpj: string; vet?: Veterinario; close:
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
+    <AsyncForm onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
       <Field label="CPF" hint={aviso}>
         <MaskedInput kind="cpf" required disabled={!!vet} value={v.cpf} onChange={onCpf} placeholder="000.000.000-00" />
       </Field>
@@ -165,7 +166,7 @@ function VetForm({ cnpj, vet, close }: { cnpj: string; vet?: Veterinario; close:
         </Button>
         <Button type="submit">{vet ? "Salvar" : "Vincular"}</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }
 
@@ -222,9 +223,9 @@ function FairForm({
       return n
     })
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
-    const ok = attempt(
+    const ok = await attempt(
       () => actions.salvarFeira({ ...f, id: feira?.id, cnpj_abrigo: cnpj, nome: f.nome.trim(), logradouro: f.logradouro.trim() }, [...sel]),
       feira ? "Feira atualizada." : "Feira criada!"
     )
@@ -232,7 +233,7 @@ function FairForm({
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <AsyncForm onSubmit={submit} className="grid gap-4">
       {!somenteEquipe && (
         <>
           <Field label="Nome do evento">
@@ -272,6 +273,6 @@ function FairForm({
         </Button>
         <Button type="submit">{feira ? "Salvar" : "Criar feira"}</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }

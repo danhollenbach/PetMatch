@@ -1,4 +1,4 @@
-import { Children, cloneElement, isValidElement, useId, useState, type ReactNode } from "react"
+import { Children, cloneElement, isValidElement, useId, useRef, useState, type ReactNode } from "react"
 import { Cat, Dog } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -26,7 +26,6 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { applyMask, maxDigits, onlyDigits, statusAnimalLabel, statusPedidoLabel, type MaskKind } from "@/lib/format"
 import { cn } from "@/lib/utils"
-import { DbError } from "@/store/db"
 import type { Especie, StatusAnimal, StatusPedido } from "@/types/db"
 
 /* ------------------------------------------------------------------ */
@@ -73,10 +72,13 @@ export function Confirm({
   title: string
   description: ReactNode
   confirmLabel?: string
-  onConfirm: () => void
+  onConfirm: () => boolean | Promise<boolean>
 }) {
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+  const lock = useRef(false)
   return (
-    <AlertDialog>
+    <AlertDialog open={open} onOpenChange={(value) => { if (!lock.current) setOpen(value) }}>
       <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -84,8 +86,15 @@ export function Confirm({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancelar</AlertDialogCancel>
-          <AlertDialogAction variant="destructive" onClick={onConfirm}>
+          <AlertDialogCancel disabled={pending}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction variant="destructive" disabled={pending} onClick={async (event) => {
+            event.preventDefault()
+            if (lock.current) return
+            lock.current = true; setPending(true)
+            try { if (await onConfirm()) setOpen(false) }
+            catch (error) { toast.error(error instanceof Error ? error.message : "Falha na operação.") }
+            finally { lock.current = false; setPending(false) }
+          }}>
             {confirmLabel}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -100,13 +109,13 @@ export function invalid(msg: string) {
 }
 
 /** Executa uma ação do banco; mostra o erro de restrição em um toast. Retorna true se deu certo. */
-export function attempt(fn: () => void, sucesso?: string) {
+export async function attempt(fn: () => unknown | Promise<unknown>, sucesso?: string) {
   try {
-    fn()
+    await fn()
     if (sucesso) toast.success(sucesso)
     return true
   } catch (e) {
-    if (e instanceof DbError) {
+    if (e instanceof Error) {
       toast.error(e.message)
       return false
     }

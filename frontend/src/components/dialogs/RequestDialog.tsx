@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useRef, useState, type ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { Check, ExternalLink, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -24,9 +24,15 @@ function RequestBody({ pedido, close }: { pedido: PedidoCompleto; close: () => v
   ).length
   const outrosDoAdotante = db.pedido_adocao.filter((p) => p.cpf_adotante === adotante.cpf && p.id !== pedido.id).length
 
-  function decidir(decisao: "aprovado" | "reprovado") {
-    if (attempt(() => actions.decidirPedido(pedido.id, decisao), decisao === "aprovado" ? `Adoção de ${animal.nome} aprovada! 🎉` : "Pedido reprovado."))
+  const lock = useRef(false)
+  const [pending, setPending] = useState(false)
+
+  async function decidir(decisao: "aprovado" | "reprovado") {
+    if (lock.current) return
+    lock.current = true; setPending(true)
+    if (await attempt(() => actions.decidirPedido(pedido.id, decisao), decisao === "aprovado" ? `Adoção de ${animal.nome} aprovada! 🎉` : "Pedido reprovado."))
       close()
+    lock.current = false; setPending(false)
   }
 
   return (
@@ -91,10 +97,10 @@ function RequestBody({ pedido, close }: { pedido: PedidoCompleto; close: () => v
             </p>
           )}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-            <Button variant="destructive" onClick={() => decidir("reprovado")}>
+            <Button disabled={pending} variant="destructive" onClick={() => decidir("reprovado")}>
               <X /> Reprovar
             </Button>
-            <Button onClick={() => decidir("aprovado")}>
+            <Button disabled={pending} onClick={() => decidir("aprovado")}>
               <Check /> Aprovar adoção
             </Button>
           </div>

@@ -1,3 +1,4 @@
+import { AsyncForm } from "@/components/AsyncForm"
 import { useState, type ReactNode } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -29,11 +30,11 @@ function AdoptionForm({ animal, close }: { animal: Animal; close: () => void }) 
     setF(existente ?? { ...f, cpf })
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (f.cpf.length !== 11) return invalid("Informe um CPF com 11 dígitos.")
     if (f.telefone.length < 10) return invalid("Informe um telefone com DDD.")
-    const ok = attempt(
+    const ok = await attempt(
       () => actions.solicitarAdocao({ ...f, nome: f.nome.trim(), email: f.email.trim() }, animal.id),
       `Pedido enviado! Boa sorte com ${animal.nome} 🐾`
     )
@@ -41,7 +42,7 @@ function AdoptionForm({ animal, close }: { animal: Animal; close: () => void }) 
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <AsyncForm onSubmit={submit} className="grid gap-4">
       <Field label="CPF" hint={conhecido ? "Encontramos seu cadastro — confira seus dados." : undefined}>
         <MaskedInput kind="cpf" required value={f.cpf} onChange={onCpf} placeholder="000.000.000-00" />
       </Field>
@@ -62,6 +63,6 @@ function AdoptionForm({ animal, close }: { animal: Animal; close: () => void }) 
         </Button>
         <Button type="submit">Enviar pedido</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }

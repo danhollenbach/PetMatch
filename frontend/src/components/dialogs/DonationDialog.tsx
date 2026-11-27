@@ -1,3 +1,4 @@
+import { AsyncForm } from "@/components/AsyncForm"
 import { useState, type ReactNode } from "react"
 import { Banknote, Package } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -55,7 +56,7 @@ function DonationForm({ cnpj, presencial, close }: { cnpj: string; presencial?: 
     setDoador(existente ? { ...existente, email: existente.email ?? "", telefone: existente.telefone ?? "" } : { ...doador, documento })
   }
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     const v = Number(valor.replace(",", "."))
     if (tipo === "dinheiro" && !(v > 0)) return invalid("Informe um valor maior que zero.")
@@ -63,7 +64,7 @@ function DonationForm({ cnpj, presencial, close }: { cnpj: string; presencial?: 
     if (identificar && ![11, 14].includes(doador.documento.length))
       return invalid("O documento do doador deve ser um CPF (11 dígitos) ou CNPJ (14 dígitos).")
 
-    const ok = attempt(
+    const ok = await attempt(
       () =>
         actions.registrarDoacao(
           {
@@ -83,7 +84,7 @@ function DonationForm({ cnpj, presencial, close }: { cnpj: string; presencial?: 
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-4">
+    <AsyncForm onSubmit={submit} className="grid gap-4">
       <Segmented
         value={tipo}
         onChange={setTipo}
@@ -146,6 +147,6 @@ function DonationForm({ cnpj, presencial, close }: { cnpj: string; presencial?: 
         </Button>
         <Button type="submit">{presencial ? "Registrar doação" : "Confirmar doação"}</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }

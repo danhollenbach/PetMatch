@@ -1,3 +1,4 @@
+import { AsyncForm } from "@/components/AsyncForm"
 import { useState, type ReactNode } from "react"
 import { useNavigate } from "react-router-dom"
 import { Button } from "@/components/ui/button"
@@ -38,7 +39,7 @@ function ShelterForm({ abrigo, close }: { abrigo?: Abrigo; close: () => void }) 
   const set = <K extends keyof Abrigo>(k: K, v: Abrigo[K]) => setF((s) => ({ ...s, [k]: v }))
   const setG = <K extends keyof Voluntario>(k: K, v: Voluntario[K]) => setGestor((s) => ({ ...s, [k]: v }))
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (f.cnpj.length !== 14) return invalid("Informe um CNPJ válido com 14 dígitos.")
     if (!f.uf) return invalid("Selecione a UF.")
@@ -46,11 +47,11 @@ function ShelterForm({ abrigo, close }: { abrigo?: Abrigo; close: () => void }) 
     const dados: Abrigo = { ...f, nome: f.nome.trim(), cep: f.cep || null }
 
     if (abrigo) {
-      if (attempt(() => actions.atualizarAbrigo(dados), "Dados do abrigo atualizados.")) close()
+      if (await attempt(() => actions.atualizarAbrigo(dados), "Dados do abrigo atualizados.")) close()
       return
     }
     if (gestor.cpf.length !== 11) return invalid("Informe o CPF do responsável com 11 dígitos.")
-    const ok = attempt(
+    const ok = await attempt(
       () =>
         actions.registrarAbrigo(dados, {
           ...gestor,
@@ -68,7 +69,7 @@ function ShelterForm({ abrigo, close }: { abrigo?: Abrigo; close: () => void }) 
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-5">
+    <AsyncForm onSubmit={submit} className="grid gap-5">
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Nome do abrigo" className="sm:col-span-2">
           <Input required maxLength={120} value={f.nome} onChange={(e) => set("nome", e.target.value)} placeholder="Ex.: Abrigo Amigos de Quatro Patas" />
@@ -126,6 +127,6 @@ function ShelterForm({ abrigo, close }: { abrigo?: Abrigo; close: () => void }) 
         </Button>
         <Button type="submit">{abrigo ? "Salvar alterações" : "Cadastrar abrigo"}</Button>
       </div>
-    </form>
+    </AsyncForm>
   )
 }
