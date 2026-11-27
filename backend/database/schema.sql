@@ -183,6 +183,22 @@ CREATE INDEX ix_aplicacao_id_vacina       ON APLICACAO (Id_vacina);
 CREATE INDEX ix_participa_id_feira        ON PARTICIPA (Id_feira_adocao);
 
 -- =====================================================================
+-- Unicidade parcial em PEDIDO_ADOCAO
+-- Valem só para as linhas do WHERE; também barram duas aprovações
+-- simultâneas do mesmo animal (a segunda transação falha).
+-- =====================================================================
+
+-- Um animal tem no máximo um pedido aprovado
+CREATE UNIQUE INDEX ux_pedido_aprovado_por_animal
+    ON PEDIDO_ADOCAO (Id_animal)
+    WHERE Status = 'aprovado';
+
+-- Um adotante tem no máximo um pedido pendente para o mesmo animal
+CREATE UNIQUE INDEX ux_pedido_pendente_por_adotante
+    ON PEDIDO_ADOCAO (Id_animal, CPF_adotante)
+    WHERE Status = 'pendente';
+
+-- =====================================================================
 -- ANIMAL 1:1 PRONTUARIO (obrigatório)
 -- Todo animal nasce com um prontuário, e o prontuário só pode ser
 -- removido junto com o animal (pelo ON DELETE CASCADE).
