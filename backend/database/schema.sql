@@ -162,6 +162,27 @@ CREATE TABLE PARTICIPA (
 );
 
 -- =====================================================================
+-- Índices das chaves estrangeiras
+-- O PostgreSQL só indexa sozinho PK e UNIQUE. Ficam de fora as FKs já
+-- cobertas por serem a primeira coluna de uma PK ou de um UNIQUE
+-- (PRONTUARIO.Id_animal, ATUA.CNPJ_abrigo, VINCULO.CPF_veterinario,
+-- APLICACAO.Id_prontuario, PARTICIPA.CPF_voluntario).
+-- =====================================================================
+
+CREATE INDEX ix_doacao_cnpj_abrigo        ON DOACAO (CNPJ_abrigo);
+CREATE INDEX ix_doacao_documento_doador   ON DOACAO (Documento_doador);
+CREATE INDEX ix_animal_cnpj_abrigo        ON ANIMAL (CNPJ_abrigo);
+CREATE INDEX ix_atendimento_id_prontuario ON ATENDIMENTO (Id_prontuario);
+CREATE INDEX ix_atendimento_veterinario   ON ATENDIMENTO (CPF_veterinario);
+CREATE INDEX ix_pedido_id_animal          ON PEDIDO_ADOCAO (Id_animal);
+CREATE INDEX ix_pedido_cpf_adotante       ON PEDIDO_ADOCAO (CPF_adotante);
+CREATE INDEX ix_feira_cnpj_abrigo         ON FEIRA_ADOCAO (CNPJ_abrigo);
+CREATE INDEX ix_atua_cpf_voluntario       ON ATUA (CPF_voluntario);
+CREATE INDEX ix_vinculo_cnpj_abrigo       ON VINCULO (CNPJ_abrigo);
+CREATE INDEX ix_aplicacao_id_vacina       ON APLICACAO (Id_vacina);
+CREATE INDEX ix_participa_id_feira        ON PARTICIPA (Id_feira_adocao);
+
+-- =====================================================================
 -- ANIMAL 1:1 PRONTUARIO (obrigatório)
 -- Todo animal nasce com um prontuário, e o prontuário só pode ser
 -- removido junto com o animal (pelo ON DELETE CASCADE).
