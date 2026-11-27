@@ -41,7 +41,7 @@ CREATE TABLE VETERINARIO (
 
 CREATE TABLE ADOTANTE (
     CPF         CHAR(11)     PRIMARY KEY,
-    Email       VARCHAR(120) NOT NULL UNIQUE,
+    Email       VARCHAR(120) NOT NULL, -- único sem diferenciar maiúsculas (ux_adotante_email)
     Nome        VARCHAR(120) NOT NULL,
     Telefone    VARCHAR(20)  NOT NULL,
     CONSTRAINT ck_adotante_cpf CHECK (CPF ~ '^[0-9]{11}$')
@@ -197,6 +197,13 @@ CREATE UNIQUE INDEX ux_pedido_aprovado_por_animal
 CREATE UNIQUE INDEX ux_pedido_pendente_por_adotante
     ON PEDIDO_ADOCAO (Id_animal, CPF_adotante)
     WHERE Status = 'pendente';
+
+-- =====================================================================
+-- E-mail do adotante único sem diferenciar maiúsculas/minúsculas
+-- Buscas por e-mail devem usar lower(Email) = lower($1) para usar o índice.
+-- =====================================================================
+
+CREATE UNIQUE INDEX ux_adotante_email ON ADOTANTE (lower(Email));
 
 -- =====================================================================
 -- ANIMAL 1:1 PRONTUARIO (obrigatório)
